@@ -12,6 +12,34 @@
 
 namespace caffe {
 
+__global__ void test_kernel_kl(const float* raw_data, int N, float* out)
+{
+  CUDA_KERNEL_LOOP(index, N)
+  {
+	  float s = 0;
+	  for (int i = 0; i < N; i++)
+	  {
+		  for (int j = 0; j < 100; j++)
+		  {
+			  for (int k = 0; k < 100; k++)
+			  {
+		  s += raw_data[i];
+			  }
+		  }
+	  }
+	  out[index] = s;
+  }
+}
+void test_kernel(const float* raw_data, int N, float* out)
+{
+  test_kernel_kl<<<CAFFE_GET_BLOCKS(N), CAFFE_CUDA_NUM_THREADS>>>(
+		  raw_data, N, out);
+}
+void test_kernel(const float* raw_data, int N, float* out, cudaStream_t &stream)
+{
+  test_kernel_kl<<<CAFFE_GET_BLOCKS(N), CAFFE_CUDA_NUM_THREADS, 0, stream>>>(
+		  raw_data, N, out);
+}
 template <>
 void caffe_gpu_gemm<float>(const CBLAS_TRANSPOSE TransA,
     const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,

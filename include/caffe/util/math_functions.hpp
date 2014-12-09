@@ -12,6 +12,9 @@
 
 namespace caffe {
 
+void test_kernel(const float* raw_data, int N, float* out);
+void test_kernel(const float* raw_data, int N, float* out, cudaStream_t &stream);
+
 // Decaf gemm provides a simpler interface to the gemm functions, with the
 // limitation that the data has to be contiguous in memory.
 template <typename Dtype>
