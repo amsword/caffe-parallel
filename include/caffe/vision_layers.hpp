@@ -16,6 +16,51 @@
 
 namespace caffe {
 
+/* CCCPLayer
+  Cascadable Cross Channel Parametric Pooling.
+  Perform weighted recombination of the channels.
+  When applied on top of convolutional layer, it is equivalent to
+  fully connected layer applied on all patches of the underlying input.
+  Stacking multiple of CCCPLayer results in a nonlinear mapping from each
+  input patch to the output feature vector.
+  Refer to Network in Network [http://arxiv.org/abs/1312.4400].
+*/
+template <typename Dtype>
+class CCCPLayer : public Layer<Dtype> {
+ public:
+  explicit CCCPLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top) {}
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_CCCP;
+  }
+  virtual inline int MinBottomBlobs() const { return 1; }
+  virtual inline int MinTopBlobs() const { return 1; }
+  virtual inline bool EqualNumBottomTopBlobs() const { return true; }
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+
+  int num_;
+  int channels_;
+  int height_;
+  int width_;
+  int num_output_;
+  int group_;
+  shared_ptr<SyncedMemory> bias_multiplier_;
+  bool bias_term_;
+};
 /**
  * @brief Convolves the input image with a bank of learned filters,
  *        and (optionally) adds biases.

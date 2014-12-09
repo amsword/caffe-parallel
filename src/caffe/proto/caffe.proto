@@ -262,6 +262,8 @@ message LayerParameter {
     TANH = 23;
     WINDOW_DATA = 24;
     THRESHOLD = 31;
+	CCCP = 409;
+	SF = 217;
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -290,6 +292,8 @@ message LayerParameter {
   // to each top blob.
   repeated float loss_weight = 35;
 
+  optional SFParameter sf_param = 410;
+  optional CCCPParameter cccp_param = 41;
   optional AccuracyParameter accuracy_param = 27;
   optional ArgMaxParameter argmax_param = 23;
   optional ConcatParameter concat_param = 9;
@@ -346,6 +350,14 @@ message TransformationParameter {
   optional string mean_file = 4;
 }
 
+// Message that stores parameters used by CCCPLayer
+message CCCPParameter {
+  optional uint32 num_output = 1; // The number of outputs for the layer
+  optional bool bias_term = 2 [default = true]; // whether to have bias terms
+  optional uint32 group = 3 [default = 1]; // group size
+  optional FillerParameter weight_filler = 4; // The filler for the weight
+  optional FillerParameter bias_filler = 5; // The filler for the bias
+}
 // Message that stores parameters used by AccuracyLayer
 message AccuracyParameter {
   // When computing accuracy, count as correct by comparing the true label to
@@ -528,6 +540,16 @@ message ImageDataParameter {
 message InfogainLossParameter {
   // Specify the infogain matrix source.
   optional string source = 1;
+}
+
+message SFParameter {
+  enum AdditionMethod {
+    CUBIC = 0; 
+	PLAIN = 1; 
+	GMM = 2;
+  }
+  optional AdditionMethod method = 1;
+  repeated FillerParameter filler = 2; // The filler for the paramter(s); 
 }
 
 // Message that stores parameters used by InnerProductLayer

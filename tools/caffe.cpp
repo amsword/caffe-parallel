@@ -106,7 +106,9 @@ int train() {
 
   LOG(INFO) << "Starting Optimization";
   shared_ptr<caffe::Solver<float> >
-    solver(caffe::GetSolver<float>(solver_param));
+	  solver(caffe::GetSolver<float>(solver_param));
+  //shared_ptr<caffe::Solver<double> >
+    //solver(caffe::GetSolver<double>(solver_param));
 
   if (FLAGS_snapshot.size()) {
     LOG(INFO) << "Resuming from " << FLAGS_snapshot;
