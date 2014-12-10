@@ -24,7 +24,22 @@ void SFLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 	  switch (this->layer_param_.sf_param().method())
 	  {
 		  case SFParameter_AdditionMethod_CUBIC:
-			  NOT_IMPLEMENTED;
+			  {
+				  this->blobs_.resize(4);
+				  int num_gaussian = this->layer_param_.sf_param().num_gaussian();
+				  this->blobs_[0].reset(new Blob<Dtype>(1, num_gaussian, 1, 1)); // coefcient
+				  this->blobs_[1].reset(new Blob<Dtype>(1, 2 * num_gaussian, 1, 1)); // mean
+				  this->blobs_[2].reset(new Blob<Dtype>(1, 2 * num_gaussian, 1, 1)); // diagonal
+				  this->blobs_[3].reset(new Blob<Dtype>(1, num_gaussian, 1, 1)); // off-diagonal
+				  CHECK_EQ(this->layer_param_.sf_param().filler_size(), 4);
+				  // init weight
+				  for (int i = 0; i < 4; i++)
+				  {
+					  shared_ptr<Filler<Dtype> > filler(GetFiller<Dtype>(
+								  this->layer_param_.sf_param().filler(i)));
+					  filler->Fill(this->blobs_[i].get());
+				  }
+			  }
 			  break;
 		  case SFParameter_AdditionMethod_PLAIN:
 			  {

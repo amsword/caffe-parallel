@@ -169,6 +169,10 @@ void Solver<Dtype>::Solve(const char* resume_file) {
   // resume_file above.
   const int start_iter = iter_;
 
+  if (param_.snapshot_before_train()) {
+	  Snapshot();
+  }
+
   // For a network that is trained by the solver, no bottom or top vecs
   // should be given, and we will just provide dummy vecs.
   vector<Blob<Dtype>*> bottom_vec;
@@ -184,7 +188,8 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       TestAll();
     }
 
-    const bool display = param_.display() && iter_ % param_.display() == 0;
+    const bool display = param_.display() && (iter_ % param_.display() == 0 || 
+			iter_ == param_.max_iter() - 1);
     net_->set_debug_info(display && param_.debug_info());
     Dtype loss = net_->ForwardBackward(bottom_vec);
     if (display) {

@@ -157,6 +157,7 @@ message SolverParameter {
 
   // If false, don't save a snapshot after training finishes.
   optional bool snapshot_after_train = 28 [default = true];
+  optional bool snapshot_before_train = 92 [default = false];
 }
 
 // A message that stores the solver snapshots
@@ -549,6 +550,7 @@ message SFParameter {
 	GMM = 2;
   }
   optional AdditionMethod method = 1;
+  optional uint32 num_gaussian = 3;
   repeated FillerParameter filler = 2; // The filler for the paramter(s); 
 }
 

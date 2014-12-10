@@ -281,6 +281,12 @@ int main(int argc, char** argv) {
       "  time            benchmark model execution time");
   // Run tool or show usage.
   caffe::GlobalInit(&argc, &argv);
+  std::string cmd;
+  for (int i = 1; i < argc; i++)
+  {
+	  cmd = cmd + argv[i];
+  }
+  LOG(INFO) << "command: " << cmd;
   if (argc == 2) {
     return GetBrewFunction(caffe::string(argv[1]))();
   } else {
