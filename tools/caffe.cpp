@@ -108,7 +108,7 @@ int train() {
   shared_ptr<caffe::Solver<float> >
 	  solver(caffe::GetSolver<float>(solver_param));
   //shared_ptr<caffe::Solver<double> >
-    //solver(caffe::GetSolver<double>(solver_param));
+	  //solver(caffe::GetSolver<double>(solver_param));
 
   if (FLAGS_snapshot.size()) {
     LOG(INFO) << "Resuming from " << FLAGS_snapshot;
@@ -269,6 +269,11 @@ int time() {
 RegisterBrewFunction(time);
 
 int main(int argc, char** argv) {
+  std::string cmd;
+  for (int i = 1; i < argc; i++)
+  {
+	  cmd = cmd + " " + argv[i];
+  }
   // Print output to stderr (while still logging).
   FLAGS_alsologtostderr = 1;
   // Usage message.
@@ -281,11 +286,6 @@ int main(int argc, char** argv) {
       "  time            benchmark model execution time");
   // Run tool or show usage.
   caffe::GlobalInit(&argc, &argv);
-  std::string cmd;
-  for (int i = 1; i < argc; i++)
-  {
-	  cmd = cmd + argv[i];
-  }
   LOG(INFO) << "command: " << cmd;
   if (argc == 2) {
     return GetBrewFunction(caffe::string(argv[1]))();

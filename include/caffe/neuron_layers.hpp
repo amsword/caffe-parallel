@@ -313,6 +313,9 @@ class SFLayer : public NeuronLayer<Dtype> {
   int channels_;
   int height_;
   int width_;
+  Blob<Dtype> gmm_plains_; // used for forward propagation
+  Blob<Dtype> top_diff_sum_;
+  Blob<Dtype> diff_buffer_;
   Blob<Dtype> multiplier_;
 };
 

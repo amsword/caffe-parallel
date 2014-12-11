@@ -550,8 +550,13 @@ message SFParameter {
 	GMM = 2;
   }
   optional AdditionMethod method = 1;
-  optional uint32 num_gaussian = 3;
   repeated FillerParameter filler = 2; // The filler for the paramter(s); 
+ 
+  // used for GMM
+  optional uint32 num_gaussian = 3 [default = 10];
+  optional float mu1 = 4 [default = 0];
+  optional float mu2 = 5 [default = 0];
+  optional bool is_projection = 6 [default = false];
 }
 
 // Message that stores parameters used by InnerProductLayer

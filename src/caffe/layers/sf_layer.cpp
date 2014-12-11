@@ -24,22 +24,7 @@ void SFLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 	  switch (this->layer_param_.sf_param().method())
 	  {
 		  case SFParameter_AdditionMethod_CUBIC:
-			  {
-				  this->blobs_.resize(4);
-				  int num_gaussian = this->layer_param_.sf_param().num_gaussian();
-				  this->blobs_[0].reset(new Blob<Dtype>(1, num_gaussian, 1, 1)); // coefcient
-				  this->blobs_[1].reset(new Blob<Dtype>(1, 2 * num_gaussian, 1, 1)); // mean
-				  this->blobs_[2].reset(new Blob<Dtype>(1, 2 * num_gaussian, 1, 1)); // diagonal
-				  this->blobs_[3].reset(new Blob<Dtype>(1, num_gaussian, 1, 1)); // off-diagonal
-				  CHECK_EQ(this->layer_param_.sf_param().filler_size(), 4);
-				  // init weight
-				  for (int i = 0; i < 4; i++)
-				  {
-					  shared_ptr<Filler<Dtype> > filler(GetFiller<Dtype>(
-								  this->layer_param_.sf_param().filler(i)));
-					  filler->Fill(this->blobs_[i].get());
-				  }
-			  }
+			  NOT_IMPLEMENTED;
 			  break;
 		  case SFParameter_AdditionMethod_PLAIN:
 			  {
@@ -60,7 +45,34 @@ void SFLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 				  break;
 			  }
 		  case SFParameter_AdditionMethod_GMM:
-			  NOT_IMPLEMENTED;
+			  {
+				  int num_gaussian = this->layer_param_.sf_param().num_gaussian();
+				  CHECK_GT(num_gaussian, 0);
+				  this->blobs_.resize(4);
+				  this->blobs_[0].reset(new Blob<Dtype>(1, num_gaussian, 1, 1)); // coefcient
+				  this->blobs_[1].reset(new Blob<Dtype>(1, 1, 2, num_gaussian)); // mean
+				  this->blobs_[2].reset(new Blob<Dtype>(1, 1, 2, num_gaussian)); // diagonal
+				  this->blobs_[3].reset(new Blob<Dtype>(1, num_gaussian, 1, 1)); // off-diagonal
+				  CHECK_EQ(this->layer_param_.sf_param().filler_size(), 4);
+				  // init weight
+				  for (int i = 0; i < 4; i++)
+				  {
+					  shared_ptr<Filler<Dtype> > filler(GetFiller<Dtype>(
+								  this->layer_param_.sf_param().filler(i)));
+					  filler->Fill(this->blobs_[i].get());
+				  }
+				  // the last one is the weighted summation;
+				  gmm_plains_.Reshape(1, num_gaussian + 1, height_, width_);
+				  // initialize the multiplier
+				  multiplier_.Reshape(num_, channels_, 1, 1);
+				  Dtype* multi = multiplier_.mutable_cpu_data();
+				  for (int i = 0; i < multiplier_.count(); i++)
+				  {
+					  multi[i] = 1.0;
+				  }
+				  top_diff_sum_.Reshape(1, 1, height_, width_);
+				  diff_buffer_.Reshape(5, num_gaussian, height_, width_);
+			  }
 			  break;
 		  default:
 			  NOT_IMPLEMENTED;
@@ -74,7 +86,6 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();
   Dtype* top_data = (*top)[0]->mutable_cpu_data();
-  const Dtype* weight = this->blobs_[0]->cpu_data();
   switch (this->layer_param_.sf_param().method())
   {
 	  case SFParameter_AdditionMethod_CUBIC:
@@ -82,6 +93,7 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 		  break;
 	  case SFParameter_AdditionMethod_PLAIN:
 		  {
+			  const Dtype* weight = this->blobs_[0]->cpu_data();
 			  caffe_copy(bottom[0]->count(), bottom_data, top_data);
 			  caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, 
 					  num_ * channels_, height_ * width_, 1, 
@@ -90,7 +102,97 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 		  }
 		  break;
 	  case SFParameter_AdditionMethod_GMM:
-		  NOT_IMPLEMENTED;
+		  {
+			  int num_gaussian = this->layer_param_.sf_param().num_gaussian();
+			  bool is_projection = this->layer_param_.sf_param().is_projection();
+			  
+			  if (is_projection)
+			  {
+				Dtype* diagonal_data = this->blobs_[2]->mutable_cpu_data();
+				Dtype* off_diag_data = this->blobs_[3]->mutable_cpu_data();
+				for (int g = 0; g < num_gaussian; g++)
+				{
+					Dtype &r11 = diagonal_data[g];
+					Dtype &r22 = diagonal_data[g + num_gaussian];
+					Dtype &r12 = off_diag_data[g];
+					if (r11 > 0 || r22 > 0 || r11 * r22 - r12 < 0)
+					{
+						if (r12 > -0.0000001 && r12 < 0.0000001)
+						{
+							if (r11 > 0) r11 = 0;
+							if (r22 > 0) r22 = 0;
+						}
+						else
+						{
+							Dtype under_sqrt = (r11 - r22) * (r11 - r22) + 4 * r12 * r12;
+							Dtype out_sqrt = sqrt(under_sqrt);
+							Dtype lamda1 = (r11 + r22 + out_sqrt) / 2;
+							Dtype lamda2 = (r11 + r22 - out_sqrt) / 2;
+							Dtype b11 = 1;
+							Dtype b12 = (lamda1 - r11) / r12;
+							Dtype b22 = 1;
+							Dtype b21 = (lamda2 - r22) / r12;
+							Dtype ampli = b11 * b11 + b12 * b12; ampli = sqrt(ampli);
+							b11 /= ampli; b12 /= ampli;
+							ampli = b21 * b21 + b22 * b22; ampli = sqrt(ampli);
+							b21 /= ampli; b22 /= ampli;
+							if (lamda1 > 0) lamda1 = 0;
+							if (lamda2 > 0) lamda2 = 0;
+							LOG(INFO) << lamda1 * b11 * b11 + lamda2 * b21 * b21;
+							LOG(INFO) << r11;
+							LOG(INFO) << lamda1 * b12 * b12 + lamda2 * b22 * b22;
+							LOG(INFO) << r22;
+							LOG(INFO) << lamda1 * b11 * b12 + lamda2 * b21 * b22;
+							LOG(INFO) << r12;
+							r11 = lamda1 * b11 * b11 + lamda2 * b21 * b21;
+							r22 = lamda1 * b12 * b12 + lamda2 * b22 * b22;
+							r12 = lamda1 * b11 * b12 + lamda2 * b21 * b22;
+						}
+					}
+				}
+			  }
+
+			  const Dtype* weight_data = this->blobs_[0]->cpu_data();
+			  const Dtype* mean_data = this->blobs_[1]->cpu_data();
+			  const Dtype* diagonal_data = this->blobs_[2]->cpu_data();
+			  const Dtype* off_diag_data = this->blobs_[3]->cpu_data();
+			  Dtype* gmm_plain_data = gmm_plains_.mutable_cpu_data();
+
+			  // compute num_gaussian plains
+			  for (int g = 0; g < num_gaussian; g++)
+			  {
+				  Dtype* gmm_data = gmm_plain_data + gmm_plains_.offset(0, g); 
+				  Dtype h_bar = *(mean_data + g);
+				  Dtype w_bar = *(mean_data + g + num_gaussian);
+				  Dtype r11 = *(diagonal_data + g);
+				  Dtype r22 = *(diagonal_data + g + num_gaussian);
+				  Dtype r12 = *(off_diag_data + g);
+				  for (int h = 0; h < height_; h++)
+				  {
+					  Dtype h_diff = (Dtype)h - h_bar;
+					  for (int w = 0; w < width_; w++)
+					  {
+						  Dtype w_diff = (Dtype)w - w_bar;
+						  Dtype v = h_diff * h_diff * r11 + w_diff * w_diff * r22 + 
+							  h_diff * w_diff * 2 * r12;
+						  *(gmm_data + h * width_ + w) = exp(v);
+					  }
+				  }
+			  }
+			  
+			  // compute the weighted summation;
+			  Dtype* summation_data = gmm_plain_data + gmm_plains_.offset(0, num_gaussian);
+			  caffe_cpu_gemv(CblasTrans, 
+					num_gaussian, height_ * width_,  
+					(Dtype)1.0, gmm_plain_data, weight_data,
+					(Dtype)0.0, summation_data);
+			  
+			  caffe_copy(bottom[0]->count(), bottom_data, top_data);
+			  caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, 
+					  num_ * channels_, height_ * width_, 1, 
+					  (Dtype)1.0, multiplier_.cpu_data(), summation_data, 
+					  (Dtype)1., top_data);
+		  }
 		  break;
 	  default:
 		  NOT_IMPLEMENTED;
@@ -103,7 +205,6 @@ void SFLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     vector<Blob<Dtype>*>* bottom) {
 	const Dtype* top_diff = top[0]->cpu_diff();
 	Dtype* bottom_diff = (*bottom)[0]->mutable_cpu_diff();
-	Dtype* weight_diff = this->blobs_[0]->mutable_cpu_diff();
   // Gradient with respect to weight
 	switch (this->layer_param_.sf_param().method())
 	{
@@ -113,14 +214,137 @@ void SFLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 		case SFParameter_AdditionMethod_PLAIN:
 			if (this->param_propagate_down_[0]) 
 			{
-				caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, 1, 
-						width_ * height_ * channels_, num_, (Dtype)1, 
-						multiplier_.cpu_data(), top_diff, 
-						(Dtype)0, weight_diff);
+				if (this->param_propagate_down_[0])
+				{
+					Dtype* weight_diff = this->blobs_[0]->mutable_cpu_diff();
+					caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, 1, 
+							width_ * height_ * channels_, num_, (Dtype)1, 
+							multiplier_.cpu_data(), top_diff, 
+							(Dtype)0, weight_diff);
+				}
 			}
 			break;
 		case SFParameter_AdditionMethod_GMM:
-			NOT_IMPLEMENTED;
+			{
+				const Dtype* weight_data = this->blobs_[0]->cpu_data();
+				const Dtype* mean_data = this->blobs_[1]->cpu_data();
+				const Dtype* diagonal_data = this->blobs_[2]->cpu_data();
+				const Dtype* off_diag_data = this->blobs_[3]->cpu_data();
+
+				Dtype* weight_diff = this->blobs_[0]->mutable_cpu_diff();
+				Dtype* mean_diff = this->blobs_[1]->mutable_cpu_diff();
+				Dtype* diagonal_diff = this->blobs_[2]->mutable_cpu_diff();
+				Dtype* off_diag_diff = this->blobs_[3]->mutable_cpu_diff();
+
+				Dtype* gmm_plain_data = gmm_plains_.mutable_cpu_data();
+				Dtype* top_diff_sum = top_diff_sum_.mutable_cpu_data();
+				int num_gaussian = this->layer_param_.sf_param().num_gaussian();
+				// the sum of top diff
+				caffe_cpu_gemv(CblasTrans,  
+						channels_ * num_, width_ * height_, 
+						(Dtype)1.0, top_diff, 
+						multiplier_.cpu_data(), 
+						(Dtype)0., top_diff_sum);
+				// diff of the weights
+				if (this->param_propagate_down_[0])
+				{
+					caffe_cpu_gemv(CblasNoTrans, num_gaussian, 
+							width_ * height_, 
+							(Dtype)1.0, gmm_plain_data, 
+							top_diff_sum, (Dtype)0., weight_diff);
+				}
+
+				const size_t block_offset = num_gaussian * height_ * width_;
+				Dtype* buffer_data = diff_buffer_.mutable_cpu_data(); 
+				// diff of the mean value;
+				for (int g = 0; g < num_gaussian; g++)
+				{
+					Dtype h_bar = *(mean_data + g);
+					Dtype w_bar = *(mean_data + g + num_gaussian);
+					Dtype r11 = *(diagonal_data + g);
+					Dtype r22 = *(diagonal_data + g + num_gaussian);
+					Dtype r12 = *(off_diag_data + g);
+					for (int h = 0; h < height_; h++)
+					{
+						Dtype h_diff = ((Dtype)h - h_bar);
+						Dtype h_diff2 = h_diff * h_diff;
+						for (int w = 0; w < width_; w++)
+						{
+							Dtype w_diff = (Dtype)w - w_bar;
+							Dtype h_proj = r11 * h_diff + r12 * w_diff;
+							Dtype w_proj = r12 * h_diff + r22 * w_diff;
+							size_t offset = g * height_ * width_ + h * width_ + w;
+							Dtype exp_value = *(gmm_plain_data + offset);
+							Dtype w_exp = weight_data[g] * exp_value;
+							buffer_data[offset] = h_proj * w_exp;
+							buffer_data[offset + block_offset] = w_proj * w_exp;
+							Dtype w_diff2 = w_diff * w_diff;
+							buffer_data[offset + block_offset * 2] = w_exp * h_diff2; 
+							buffer_data[offset + block_offset * 3] = w_exp * w_diff2;
+							buffer_data[offset + block_offset * 4] = w_exp * w_diff * h_diff * 2;
+						}
+					}
+				}
+				if (this->param_propagate_down_[1])
+				{
+					caffe_cpu_gemv(CblasNoTrans, 
+							2 * num_gaussian, width_ * height_, 
+							(Dtype)1., buffer_data, 
+							top_diff_sum, (Dtype)0., mean_diff);
+				}
+
+				Dtype mu1 = this->layer_param_.sf_param().mu1();
+				Dtype mu2 = this->layer_param_.sf_param().mu2();
+				if (this->param_propagate_down_[2])
+				{
+					caffe_cpu_gemv(CblasNoTrans, 
+							2 * num_gaussian, width_ * height_, 
+							(Dtype)1., buffer_data + 2 * num_gaussian * width_ * height_, 
+							top_diff_sum, (Dtype)0., diagonal_diff);
+					if (mu1 > 0.00000001 ||  mu2 > 0.00000001)
+					{
+						for (int g = 0; g < num_gaussian; g++) 
+						{
+							Dtype r11 = diagonal_data[g];
+							Dtype r22 = diagonal_data[g + num_gaussian];
+							Dtype r12 = off_diag_data[g];
+							if (r11 > 0)
+							{
+								diagonal_diff[g] += mu1;
+							}
+							if (r22 > 0)
+							{
+								diagonal_diff[g + num_gaussian] += mu1;
+							}
+							if (r12 * r12 - r11 * r22 > 0)
+							{
+								diagonal_diff[g] -= r22 * mu1;
+								diagonal_diff[g + num_gaussian] -= r11 * mu2;
+							}
+						}
+					}
+				}
+				if (this->param_propagate_down_[3])
+				{
+					caffe_cpu_gemv(CblasNoTrans, 
+							num_gaussian, width_ * height_, 
+							(Dtype)1., buffer_data + 4 * num_gaussian * width_ * height_, 
+							top_diff_sum, (Dtype)0., off_diag_diff);
+					if (mu1 > 0.00000001 ||  mu2 > 0.00000001)
+					{
+						for (int g = 0; g < num_gaussian; g++) 
+						{
+							Dtype r11 = diagonal_data[g];
+							Dtype r22 = diagonal_data[g + num_gaussian];
+							Dtype r12 = off_diag_data[g];
+							if (r12 * r12 - r11 * r22 > 0)
+							{
+								off_diag_diff[g] += 2 * r12 * mu2;
+							}
+						}
+					}
+				}
+			}
 			break;
 		default:
 			NOT_IMPLEMENTED;
@@ -128,21 +352,8 @@ void SFLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
 	if (propagate_down[0]) {
 		// Gradient with respect to bottom data
-		switch (this->layer_param_.sf_param().method())
-		{
-			case SFParameter_AdditionMethod_CUBIC:
-				break;
-			case SFParameter_AdditionMethod_PLAIN:
-				{
-				int count = top[0]->count(); 
-				caffe_copy(count, top_diff, bottom_diff);
-				}
-				break;
-			case SFParameter_AdditionMethod_GMM:
-				break;
-			default:
-				NOT_IMPLEMENTED;
-		}
+		int count = top[0]->count(); 
+		caffe_copy(count, top_diff, bottom_diff);
 	}
 }
 
