@@ -240,6 +240,20 @@ void Blob<Dtype>::CopyFrom(const Blob& source, bool copy_diff, bool reshape) {
 }
 
 template <typename Dtype>
+void Blob<Dtype>::save_to_file(const std::string& file_name)
+{
+	FILE* fp = fopen(file_name.c_str(), "wb");
+	CHECK(fp);
+	fwrite(&num_, sizeof(int), 1, fp);
+	fwrite(&channels_, sizeof(int), 1, fp);
+	fwrite(&height_, sizeof(int), 1, fp);
+	fwrite(&width_, sizeof(int), 1, fp);
+	fwrite(data_->cpu_data(), sizeof(Dtype), count_, fp);
+	fwrite(diff_->cpu_data(), sizeof(Dtype), count_, fp);
+	fclose(fp);
+}
+
+template <typename Dtype>
 void Blob<Dtype>::FromProto(const BlobProto& proto) {
   Reshape(proto.num(), proto.channels(), proto.height(), proto.width());
   // copy data

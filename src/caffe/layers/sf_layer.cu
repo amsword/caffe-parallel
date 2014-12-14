@@ -44,7 +44,7 @@ __global__ void project_negative(const int num_gaussian, Dtype* diagonal_data,
 	  Dtype &r11 = diagonal_data[g];
 	  Dtype &r22 = diagonal_data[g + num_gaussian];
 	  Dtype &r12 = off_diag_data[g];
-	  if (r11 > 0 || r22 > 0 || r11 * r22 - r12 < 0)
+	  if (r11 > 0 || r22 > 0 || r11 * r22 - r12 * r12 < 0)
 	  {
 		  if (r12 > -0.0000001 && r12 < 0.0000001)
 		  {
@@ -98,10 +98,11 @@ void SFLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 		  {
 			  int num_gaussian = this->layer_param_.sf_param().num_gaussian();
 			  bool is_projection = this->layer_param_.sf_param().is_projection();
+			  CHECK(is_projection);
 			  if (is_projection)
 			  {
-				  Dtype* diagonal_data = this->blobs_[2]->mutable_cpu_data();
-				  Dtype* off_diag_data = this->blobs_[3]->mutable_cpu_data();
+				  Dtype* diagonal_data = this->blobs_[2]->mutable_gpu_data();
+				  Dtype* off_diag_data = this->blobs_[3]->mutable_gpu_data();
 				  project_negative<Dtype><<<CAFFE_GET_BLOCKS(num_gaussian), CAFFE_CUDA_NUM_THREADS>>>
 					  (num_gaussian, diagonal_data, off_diag_data);
 			  }
@@ -166,13 +167,15 @@ __global__ void compute_diff_buffer(const int nthreads,
 		Dtype r11 = *(diagonal_data + g);
 		Dtype r22 = *(diagonal_data + g + num_gaussian);
 		Dtype r12 = *(off_diag_data + g);
-		Dtype h_diff = ((Dtype)h - h_bar);
+		Dtype h_diff = h_bar - (Dtype)h;
 		Dtype h_diff2 = h_diff * h_diff;
-		Dtype w_diff = (Dtype)w - w_bar;
+		Dtype w_diff = w_bar - (Dtype)w;
 		Dtype w_diff2 = w_diff * w_diff;
 		Dtype hw_diff = 2 * h_diff * w_diff;
 		Dtype h_proj = r11 * h_diff + r12 * w_diff;
+		h_proj *= 2;
 		Dtype w_proj = r12 * h_diff + r22 * w_diff;
+		w_proj *= 2;
 		int offset = idx_in_block; 
 		Dtype exp_value = *(gmm_plain_data + offset);
 		Dtype w_exp = weight_data[g] * exp_value;
@@ -262,7 +265,6 @@ void SFLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     vector<Blob<Dtype>*>* bottom) {
 	const Dtype* top_diff = top[0]->gpu_diff();
 	Dtype* bottom_diff = (*bottom)[0]->mutable_gpu_diff();
-	Dtype* weight_diff = this->blobs_[0]->mutable_gpu_diff();
 	// Gradient with respect to weight
 	switch (this->layer_param_.sf_param().method())
 	{
@@ -271,6 +273,7 @@ void SFLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 		case SFParameter_AdditionMethod_PLAIN:
 			if (this->param_propagate_down_[0]) 
 			{
+				Dtype* weight_diff = this->blobs_[0]->mutable_gpu_diff();
 				caffe_gpu_gemm(CblasNoTrans, CblasNoTrans, 1, 
 						width_ * height_ * channels_, num_, (Dtype)1, 
 						multiplier_.gpu_data(), top_diff, 
@@ -289,8 +292,7 @@ void SFLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 				Dtype* diagonal_diff = this->blobs_[2]->mutable_gpu_diff();
 				Dtype* off_diag_diff = this->blobs_[3]->mutable_gpu_diff();
 				
-				Dtype* gmm_plain_data = gmm_plains_.mutable_gpu_data();
-				Dtype* buffer_data = diff_buffer_.mutable_gpu_data(); 
+				const Dtype* gmm_plain_data = gmm_plains_.gpu_data();
 				Dtype* top_diff_sum = top_diff_sum_.mutable_gpu_data();
 				int num_gaussian = this->layer_param_.sf_param().num_gaussian();
 				// the sum of top diff
@@ -307,6 +309,7 @@ void SFLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 							(Dtype)1.0, gmm_plain_data, 
 							top_diff_sum, (Dtype)0., weight_diff);
 				}
+				Dtype* buffer_data = diff_buffer_.mutable_gpu_data(); 
 			
 				// diff of the mean value;
 				int nthreads = 5 * num_gaussian * height_ * width_;

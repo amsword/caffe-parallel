@@ -7,11 +7,13 @@
 
 #include "caffe/caffe.hpp"
 using namespace caffe;
-int main(int argc, char* argv[])
+
+
+
+void test_time(int N)
 {
 	LOG(INFO) << "begin";
 	Caffe::Get().SetDevice(1);
-	int N = atoi(argv[1]);
 	LOG(INFO) << N;
 	Blob<float> raw_data;
 	raw_data.Reshape(N, 1, 1, 1);
@@ -65,6 +67,16 @@ int main(int argc, char* argv[])
 	{
 		cudaStreamDestroy(vec_streams[i]);
 	}
+}
+
+int main(int argc, char** argv)
+{
+	//google::ParseCommandLineFlags(&argc, &argv, true);
+
+	test_time(100);
+
+
+
 	return 0;
 }
 

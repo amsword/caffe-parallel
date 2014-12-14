@@ -115,7 +115,7 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 					Dtype &r11 = diagonal_data[g];
 					Dtype &r22 = diagonal_data[g + num_gaussian];
 					Dtype &r12 = off_diag_data[g];
-					if (r11 > 0 || r22 > 0 || r11 * r22 - r12 < 0)
+					if (r11 > 0 || r22 > 0 || r11 * r22 - r12 * r12 < 0)
 					{
 						if (r12 > -0.0000001 && r12 < 0.0000001)
 						{
@@ -138,18 +138,20 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 							b21 /= ampli; b22 /= ampli;
 							if (lamda1 > 0) lamda1 = 0;
 							if (lamda2 > 0) lamda2 = 0;
-							LOG(INFO) << lamda1 * b11 * b11 + lamda2 * b21 * b21;
-							LOG(INFO) << r11;
-							LOG(INFO) << lamda1 * b12 * b12 + lamda2 * b22 * b22;
-							LOG(INFO) << r22;
-							LOG(INFO) << lamda1 * b11 * b12 + lamda2 * b21 * b22;
-							LOG(INFO) << r12;
 							r11 = lamda1 * b11 * b11 + lamda2 * b21 * b21;
 							r22 = lamda1 * b12 * b12 + lamda2 * b22 * b22;
 							r12 = lamda1 * b11 * b12 + lamda2 * b21 * b22;
 						}
 					}
 				}
+				//Dtype* mean_data = this->blobs_[1]->mutable_cpu_data();
+				//for (int g = 0; g < num_gaussian; g++)
+				//{
+					//if (mean_data[g] < 0) mean_data[g] = 0;
+					//if (mean_data[g] > height_ - 1) mean_data[g] = height_ - 1;
+					//if (mean_data[g + num_gaussian] < 0) mean_data[g + num_gaussian] = 0;
+					//if (mean_data[g + num_gaussian] > width_ - 1) mean_data[g + num_gaussian] = width_ - 1;
+				//}
 			  }
 
 			  const Dtype* weight_data = this->blobs_[0]->cpu_data();
@@ -175,6 +177,7 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 						  Dtype w_diff = (Dtype)w - w_bar;
 						  Dtype v = h_diff * h_diff * r11 + w_diff * w_diff * r22 + 
 							  h_diff * w_diff * 2 * r12;
+						  CHECK_LT(v, 100);
 						  *(gmm_data + h * width_ + w) = exp(v);
 					  }
 				  }
@@ -187,6 +190,9 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 					(Dtype)1.0, gmm_plain_data, weight_data,
 					(Dtype)0.0, summation_data);
 			  
+			  //gmm_plains_.save_to_file("/home/wangjianfeng/gmm_plain");
+			  //LOG(FATAL);
+
 			  caffe_copy(bottom[0]->count(), bottom_data, top_data);
 			  caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, 
 					  num_ * channels_, height_ * width_, 1, 
@@ -236,7 +242,7 @@ void SFLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 				Dtype* diagonal_diff = this->blobs_[2]->mutable_cpu_diff();
 				Dtype* off_diag_diff = this->blobs_[3]->mutable_cpu_diff();
 
-				Dtype* gmm_plain_data = gmm_plains_.mutable_cpu_data();
+				const Dtype* gmm_plain_data = gmm_plains_.cpu_data();
 				Dtype* top_diff_sum = top_diff_sum_.mutable_cpu_data();
 				int num_gaussian = this->layer_param_.sf_param().num_gaussian();
 				// the sum of top diff
@@ -266,13 +272,15 @@ void SFLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 					Dtype r12 = *(off_diag_data + g);
 					for (int h = 0; h < height_; h++)
 					{
-						Dtype h_diff = ((Dtype)h - h_bar);
+						Dtype h_diff = h_bar - (Dtype)h;
 						Dtype h_diff2 = h_diff * h_diff;
 						for (int w = 0; w < width_; w++)
 						{
-							Dtype w_diff = (Dtype)w - w_bar;
+							Dtype w_diff = w_bar - (Dtype)w;
 							Dtype h_proj = r11 * h_diff + r12 * w_diff;
+							h_proj *= 2;
 							Dtype w_proj = r12 * h_diff + r22 * w_diff;
+							w_proj *= 2;
 							size_t offset = g * height_ * width_ + h * width_ + w;
 							Dtype exp_value = *(gmm_plain_data + offset);
 							Dtype w_exp = weight_data[g] * exp_value;
