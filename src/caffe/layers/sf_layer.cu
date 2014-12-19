@@ -83,6 +83,14 @@ void SFLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
   switch (this->layer_param_.sf_param().method())
   {
 	  case SFParameter_AdditionMethod_CUBIC:
+		  {
+			  const Dtype* weight = this->blobs_[0]->gpu_data();
+			  caffe_copy(bottom[0]->count(), bottom_data, top_data);
+			  caffe_gpu_gemm(CblasNoTrans, CblasNoTrans, 
+					  num_, channels_ * width_ * height_, 1, 
+					  (Dtype)1., multiplier_.gpu_data(),
+					  weight, (Dtype)1., top_data);
+		  }
 		  break;
 	  case SFParameter_AdditionMethod_PLAIN:
 		  {
@@ -92,6 +100,8 @@ void SFLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 					  num_ * channels_, width_ * height_, 1, 
 					  (Dtype)1., multiplier_.gpu_data(),
 					  weight, (Dtype)1., top_data);
+
+			  //this->blobs_[0]->save_to_file("/home/wangjianfeng/" + this->layer_param_.name() + "plain");
 		  }
 		  break;
 	  case SFParameter_AdditionMethod_GMM:
@@ -127,7 +137,8 @@ void SFLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 					1, height_ * width_, num_gaussian, 
 					(Dtype)1.0, weight_data, gmm_plain_data, 
 					(Dtype)0.0, summation_data);
-			  
+
+			  //gmm_plains_.save_to_file("/home/wangjianfeng/" + this->layer_param_.name() + "gmm");
 			  caffe_copy(bottom[0]->count(), bottom_data, top_data);
 			  caffe_gpu_gemm(CblasNoTrans, CblasNoTrans, 
 					  num_ * channels_, height_ * width_, 1, 
@@ -269,13 +280,21 @@ void SFLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 	switch (this->layer_param_.sf_param().method())
 	{
 		case SFParameter_AdditionMethod_CUBIC:
+			if (this->param_propagate_down_[0]) 
+			{
+				Dtype* weight_diff = this->blobs_[0]->mutable_gpu_diff();
+				caffe_gpu_gemm(CblasNoTrans, CblasNoTrans, 1, 
+						width_ * height_ * channels_, num_, (Dtype)1, 
+						multiplier_.gpu_data(), top_diff, 
+						(Dtype)0, weight_diff);
+			}
 			break;
 		case SFParameter_AdditionMethod_PLAIN:
 			if (this->param_propagate_down_[0]) 
 			{
 				Dtype* weight_diff = this->blobs_[0]->mutable_gpu_diff();
 				caffe_gpu_gemm(CblasNoTrans, CblasNoTrans, 1, 
-						width_ * height_ * channels_, num_, (Dtype)1, 
+						width_ * height_, channels_ * num_, (Dtype)1, 
 						multiplier_.gpu_data(), top_diff, 
 						(Dtype)0, weight_diff);
 			}

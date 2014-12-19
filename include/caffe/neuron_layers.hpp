@@ -309,6 +309,8 @@ class SFLayer : public NeuronLayer<Dtype> {
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
 
+  void test_gradient();
+
   int num_;
   int channels_;
   int height_;

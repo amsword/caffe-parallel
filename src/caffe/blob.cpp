@@ -243,7 +243,8 @@ template <typename Dtype>
 void Blob<Dtype>::save_to_file(const std::string& file_name)
 {
 	FILE* fp = fopen(file_name.c_str(), "wb");
-	CHECK(fp);
+	CHECK(fp) << file_name;
+	LOG(INFO) << "save blob to file: " << file_name;
 	fwrite(&num_, sizeof(int), 1, fp);
 	fwrite(&channels_, sizeof(int), 1, fp);
 	fwrite(&height_, sizeof(int), 1, fp);

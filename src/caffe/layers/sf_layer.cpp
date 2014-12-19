@@ -1,5 +1,5 @@
 #include <vector>
-
+#include <iomanip>
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
@@ -24,7 +24,22 @@ void SFLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 	  switch (this->layer_param_.sf_param().method())
 	  {
 		  case SFParameter_AdditionMethod_CUBIC:
-			  NOT_IMPLEMENTED;
+			  {
+				  this->blobs_.resize(1);
+				  // Intialize the weight
+				  this->blobs_[0].reset(new Blob<Dtype>(1, channels_, height_, width_));
+				  CHECK_GE(this->layer_param_.sf_param().filler_size(), 1);
+				  shared_ptr<Filler<Dtype> > filler(GetFiller<Dtype>(
+							  this->layer_param_.sf_param().filler(0)));
+				  filler->Fill(this->blobs_[0].get());
+				  // initialize the multiplier
+				  multiplier_.Reshape(num_, 1, 1, 1);
+				  Dtype* multi = multiplier_.mutable_cpu_data();
+				  for (int i = 0; i < multiplier_.count(); i++)
+				  {
+					  multi[i] = 1.0;
+				  }
+			  }
 			  break;
 		  case SFParameter_AdditionMethod_PLAIN:
 			  {
@@ -79,6 +94,7 @@ void SFLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 	  }
   }  // parameter initialization
   this->param_propagate_down_.resize(this->blobs_.size(), true);
+  //test_gradient(); LOG(FATAL);
 }
 
 template <typename Dtype>
@@ -89,7 +105,19 @@ void SFLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   switch (this->layer_param_.sf_param().method())
   {
 	  case SFParameter_AdditionMethod_CUBIC:
-		  NOT_IMPLEMENTED;
+		  {
+			  const Dtype* weight = this->blobs_[0]->cpu_data();
+			  for (int n = 0; n < num_; n++)
+			  {
+				  const Dtype* curr_bottom_data = bottom_data + bottom[0]->offset(n);
+				  Dtype* curr_top_data = top_data + (*top)[0]->offset(n);
+
+				  for (int i = 0; i < this->blobs_[0]->count(); i++)
+				  {
+					  curr_top_data[i] = curr_bottom_data[i] + weight[i];
+				  }
+			  }
+		  }
 		  break;
 	  case SFParameter_AdditionMethod_PLAIN:
 		  {
@@ -220,14 +248,11 @@ void SFLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 		case SFParameter_AdditionMethod_PLAIN:
 			if (this->param_propagate_down_[0]) 
 			{
-				if (this->param_propagate_down_[0])
-				{
-					Dtype* weight_diff = this->blobs_[0]->mutable_cpu_diff();
-					caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, 1, 
-							width_ * height_ * channels_, num_, (Dtype)1, 
-							multiplier_.cpu_data(), top_diff, 
-							(Dtype)0, weight_diff);
-				}
+				Dtype* weight_diff = this->blobs_[0]->mutable_cpu_diff();
+				caffe_cpu_gemm(CblasNoTrans, CblasNoTrans, 1, 
+						width_ * height_, channels_ * num_, (Dtype)1, 
+						multiplier_.cpu_data(), top_diff, 
+						(Dtype)0, weight_diff);
 			}
 			break;
 		case SFParameter_AdditionMethod_GMM:
@@ -363,6 +388,94 @@ void SFLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 		int count = top[0]->count(); 
 		caffe_copy(count, top_diff, bottom_diff);
 	}
+}
+
+template <typename Dtype>
+void SFLayer<Dtype>::test_gradient()
+{
+	// set bottom
+	FillerParameter filler_param;
+	vector<Blob<Dtype>*> bottom(1);
+	shared_ptr<Blob<Dtype> > input_blob(new Blob<Dtype>());
+	input_blob->Reshape(num_, channels_, height_, width_);
+	bottom[0] = input_blob.get();
+	filler_param.set_value(0);
+	filler_param.set_type("gaussian");
+	filler_param.set_std(1);
+	shared_ptr<Filler<Dtype> > filler(GetFiller<Dtype>(filler_param));
+	filler->Fill(input_blob.get());
+
+	// init top
+	vector<Blob<Dtype>*> top(1);
+	shared_ptr<Blob<Dtype> > output_blob(new Blob<Dtype>());
+	output_blob->ReshapeLike(*input_blob);
+	top[0] = output_blob.get();
+
+	// forward
+	Forward_gpu(bottom,&top);
+	const Dtype* pout = output_blob->cpu_data();
+	Dtype obj = 0;
+	for (int i = 0; i < output_blob->count(); i++)
+	{
+		obj += pout[i] * pout[i];
+	}
+	obj *= 0.5;
+
+	LOG(INFO) << input_blob->asum_data() << "\t"
+		<< output_blob->asum_data();
+	// calc grad
+	vector<bool> is_down(1);
+	is_down[0] = true;
+	caffe_copy(output_blob->count(), 
+			output_blob->gpu_data(), 
+			output_blob->mutable_gpu_diff());
+	Backward_gpu(top, is_down, &bottom);
+
+	LOG(INFO) << "obj: " << obj;
+
+	LOG(INFO) << num_ << "\t" << channels_ << "\t" << height_ << "\t" 
+		<< width_;
+	Dtype eps = 0.000001;
+	Dtype total_error = 0;
+	int num_error = 0;
+	int num_printed = 0;
+	for (int i = 0; i < 1; i++, eps *= 0.1)
+	{
+		LOG(INFO) << eps;
+		for (int idx_blob = 0; idx_blob < this->blobs_.size(); idx_blob++)
+		{
+			LOG(INFO) << idx_blob;
+			shared_ptr<Blob<Dtype> > param = this->blobs_[idx_blob];
+			for (int idx_item = 0; idx_item < param->count(); idx_item++)
+			{
+				Dtype *x = param->mutable_cpu_data() + idx_item;	
+				(*x) += eps;
+				Forward_gpu(bottom, &top);
+				x = param->mutable_cpu_data() + idx_item;
+				(*x) -= eps;
+				const Dtype* pout = output_blob->cpu_data();
+				Dtype obj_eps = 0;
+				for (int i = 0; i < output_blob->count(); i++)
+				{
+					obj_eps += pout[i] * pout[i];
+				}
+				obj_eps *= 0.5;
+				Dtype ref_grad = (obj_eps - obj) / eps;
+				Dtype calc_grad = *(param->cpu_diff() + idx_item);
+				Dtype rela_error = abs((ref_grad - calc_grad) / ref_grad);
+				total_error += rela_error;
+				num_error++;
+				if (num_printed++ < 100)
+				{
+					LOG(INFO) << std::setw(10) << ref_grad << "\t"
+						<< std::setw(10) << calc_grad << "\t"
+						<< std::setw(10) << rela_error;
+					
+				}
+			}
+		}
+	}
+	LOG(FATAL) << total_error / num_error;
 }
 
 #ifdef CPU_ONLY

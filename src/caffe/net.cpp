@@ -635,6 +635,64 @@ void Net<Dtype>::UpdateDebugInfo(const int param_id) {
 }
 
 template <typename Dtype>
+Dtype Net<Dtype>::ForwardBackward(const vector<Blob<Dtype>* > & bottom, int num_iter)
+{
+	Dtype loss;
+	Forward(bottom, &loss);
+	Backward();
+	if (num_iter > 1)
+	{
+		if (avg_params_.size() != params_.size())
+		{
+			// initialize
+			avg_params_.resize(params_.size());
+			for (int i = 0; i < params_.size(); i++)
+			{
+				avg_params_[i].reset(new Blob<Dtype>());
+				avg_params_[i]->ReshapeLike(*params_[i]);
+			}
+		}
+		CHECK_EQ(Caffe::mode(), Caffe::GPU) << "only support gpu";
+		// copy the diff;
+		int num_params = params_.size();
+		for (int i = 0; i < num_params; i++)
+		{
+			caffe_copy(params_[i]->count(), 
+					params_[i]->gpu_diff(), 
+					avg_params_[i]->mutable_gpu_diff());
+		}
+		for (int iter = 1; iter < num_iter; iter++)
+		{
+			Dtype curr_loss;
+			Forward(bottom, &curr_loss);
+			Backward();
+			loss += curr_loss;
+
+			for (int i = 0; i < num_params; i++)
+			{
+				caffe_gpu_add(params_[i]->count(), 
+						params_[i]->gpu_diff(), 
+						avg_params_[i]->gpu_diff(),
+						avg_params_[i]->mutable_gpu_diff());
+			}
+		}
+		// divide and copy back
+		for (int i = 0; i < num_params; i++)
+		{
+			caffe_gpu_scale(params_[i]->count(), 
+					(Dtype)1.0 / (Dtype)num_iter,
+					avg_params_[i]->gpu_diff(),
+					avg_params_[i]->mutable_gpu_diff());
+			caffe_copy(params_[i]->count(), 
+					avg_params_[i]->gpu_diff(), 
+					params_[i]->mutable_gpu_diff());
+		}
+		loss /= (Dtype)num_iter;
+	}
+	return loss;
+}
+
+template <typename Dtype>
 void Net<Dtype>::ShareTrainedLayersWith(Net* other) {
   int num_source_layers = other->layers().size();
   for (int i = 0; i < num_source_layers; ++i) {
@@ -711,7 +769,7 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
       CHECK_EQ(target_blobs[j]->num(), source_layer.blobs(j).num());
       CHECK_EQ(target_blobs[j]->channels(), source_layer.blobs(j).channels());
       CHECK_EQ(target_blobs[j]->height(), source_layer.blobs(j).height());
-      CHECK_EQ(target_blobs[j]->width(), source_layer.blobs(j).width());
+      CHECK_EQ(target_blobs[j]->width(), source_layer.blobs(j).width()) << source_layer_name;
       target_blobs[j]->FromProto(source_layer.blobs(j));
     }
   }

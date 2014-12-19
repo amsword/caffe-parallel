@@ -82,6 +82,8 @@ class Net {
     return loss;
   }
 
+  Dtype ForwardBackward(const vector<Blob<Dtype>* > & bottom, int num_iter);
+
   /// @brief Updates the network weights based on the diff values computed.
   void Update();
 
@@ -216,6 +218,8 @@ class Net {
   string name_;
   /// The parameters in the network.
   vector<shared_ptr<Blob<Dtype> > > params_;
+  /// only used for update_iter > 1
+  vector<shared_ptr<Blob<Dtype> > > avg_params_;
   /// the learning rate multipliers
   vector<float> params_lr_;
   /// the weight decay multipliers
