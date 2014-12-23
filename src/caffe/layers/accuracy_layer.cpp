@@ -37,12 +37,13 @@ void AccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   const Dtype* bottom_label = bottom[1]->cpu_data();
   int num = bottom[0]->num();
   int dim = bottom[0]->count() / bottom[0]->num();
+  int additional = this->layer_param_.accuracy_param().additional();
   vector<Dtype> maxval(top_k_+1);
   vector<int> max_id(top_k_+1);
   for (int i = 0; i < num; ++i) {
     // Top-k accuracy
     std::vector<std::pair<Dtype, int> > bottom_data_vector;
-    for (int j = 0; j < dim; ++j) {
+    for (int j = 0; j < dim - additional; ++j) {
       bottom_data_vector.push_back(
           std::make_pair(bottom_data[i * dim + j], j));
     }

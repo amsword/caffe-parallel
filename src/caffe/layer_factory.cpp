@@ -256,7 +256,7 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
   case LayerParameter_LayerType_SF:
     return new SFLayer<Dtype>(param);
   case LayerParameter_LayerType_SOFTMAX_PLUS1_LOSS:
-    return new SoftmaxWithPlus1LossLayer<Dtype>(param);
+    return new SoftmaxPlus1LossLayer<Dtype>(param);
   case LayerParameter_LayerType_NONE:
     LOG(FATAL) << "Layer " << name << " has unspecified type.";
   default:

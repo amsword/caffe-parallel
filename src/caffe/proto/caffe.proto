@@ -297,7 +297,7 @@ message LayerParameter {
   repeated float loss_weight = 35;
 
   optional SFParameter sf_param = 410;
-  optional SoftMaxPlus1LossParameter sp1_param = 411;
+  optional Plus1LossParameter sp1_param = 411;
   optional CCCPParameter cccp_param = 41;
   optional AccuracyParameter accuracy_param = 27;
   optional ArgMaxParameter argmax_param = 23;
@@ -369,6 +369,8 @@ message AccuracyParameter {
   // the top k scoring classes.  By default, only compare to the top scoring
   // class (i.e. argmax).
   optional uint32 top_k = 1 [default = 1];
+  // used in plus1 loss
+  optional int32 additional = 2 [default = 0];
 }
 
 // Message that stores parameters used by ArgMaxLayer
@@ -670,10 +672,9 @@ message SliceParameter {
   optional uint32 slice_dim = 1 [default = 1];
   repeated uint32 slice_point = 2;
 }
-message SoftMaxPlus1LossParameter {
-	optional float threshold = 1 [default = 0.5];
-	optional float lambda = 2 [default = 1.0];
-	optional float gamma = 3 [default = 0.00001];
+message Plus1LossParameter {
+	optional float lower_bound = 1 [default = 0.8];
+	optional float upper_bound = 2 [default = 1];
 }
 // Message that stores parameters used by SoftmaxLayer, SoftMaxWithLossLayer
 message SoftmaxParameter {

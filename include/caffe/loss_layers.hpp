@@ -764,9 +764,9 @@ class SoftmaxWithLossLayer : public LossLayer<Dtype> {
 };
 
 template <typename Dtype>
-class SoftmaxWithPlus1LossLayer : public LossLayer<Dtype> {
+class SoftmaxPlus1LossLayer : public LossLayer<Dtype> {
  public:
-  explicit SoftmaxWithPlus1LossLayer(const LayerParameter& param)
+  explicit SoftmaxPlus1LossLayer(const LayerParameter& param)
       : LossLayer<Dtype>(param),
         softmax_layer_(new SoftmaxLayer<Dtype>(param)) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -775,7 +775,7 @@ class SoftmaxWithPlus1LossLayer : public LossLayer<Dtype> {
       vector<Blob<Dtype>*>* top);
 
   virtual inline LayerParameter_LayerType type() const {
-    return LayerParameter_LayerType_SOFTMAX_LOSS;
+    return LayerParameter_LayerType_SOFTMAX_PLUS1_LOSS;
   }
   virtual inline int ExactNumBottomBlobs() const { return -1; }
   virtual inline int MinBottomBlobs() const { return 2; }
@@ -791,44 +791,17 @@ class SoftmaxWithPlus1LossLayer : public LossLayer<Dtype> {
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
 
-  /**
-   * @brief Computes the softmax loss error gradient w.r.t. the predictions.
-   *
-   * Gradients cannot be computed with respect to the label inputs (bottom[1]),
-   * so this method ignores bottom[1] and requires !propagate_down[1], crashing
-   * if propagate_down[1] is set.
-   *
-   * @param top output Blob vector (length 1), providing the error gradient with
-   *      respect to the outputs
-   *   -# @f$ (1 \times 1 \times 1 \times 1) @f$
-   *      This Blob's diff will simply contain the loss_weight* @f$ \lambda @f$,
-   *      as @f$ \lambda @f$ is the coefficient of this layer's output
-   *      @f$\ell_i@f$ in the overall Net loss
-   *      @f$ E = \lambda_i \ell_i + \mbox{other loss terms}@f$; hence
-   *      @f$ \frac{\partial E}{\partial \ell_i} = \lambda_i @f$.
-   *      (*Assuming that this top Blob is not used as a bottom (input) by any
-   *      other layer of the Net.)
-   * @param propagate_down see Layer::Backward.
-   *      propagate_down[1] must be false as we can't compute gradients with
-   *      respect to the labels.
-   * @param bottom input Blob vector (length 2)
-   *   -# @f$ (N \times C \times H \times W) @f$
-   *      the predictions @f$ x @f$; Backward computes diff
-   *      @f$ \frac{\partial E}{\partial x} @f$
-   *   -# @f$ (N \times 1 \times 1 \times 1) @f$
-   *      the labels -- ignored as we can't compute their error gradients
-   */
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
   virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
-
+  
   void test_bottom_diff();
   /// The internal SoftmaxLayer used to map predictions to a distribution.
   shared_ptr<SoftmaxLayer<Dtype> > softmax_layer_;
   /// prob stores the output probability predictions from the SoftmaxLayer.
   Blob<Dtype> prob_;
-  Blob<int> max_idx_;
+  Blob<Dtype> opt_target_;
   /// bottom vector holder used in call to the underlying SoftmaxLayer::Forward
   vector<Blob<Dtype>*> softmax_bottom_vec_;
   /// top vector holder used in call to the underlying SoftmaxLayer::Forward
