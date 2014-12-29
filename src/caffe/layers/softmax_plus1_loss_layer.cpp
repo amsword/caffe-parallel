@@ -66,15 +66,10 @@ void SoftmaxPlus1LossLayer<Dtype>::Forward_cpu(
 		{
 			prob_target = prob_at_label / (prob_at_label + prob_last);
 		}
-		if (prob_target > 0.9999)
-		{
-			loss -= prob_target * log(std::max(prob_at_label, Dtype(FLT_MIN)));
-		}
-		else
-		{
-			loss -= prob_target * log(std::max(prob_at_label, Dtype(FLT_MIN)))
-				+ (1 - prob_target) * log(std::max(prob_last, Dtype(FLT_MIN)));
-		}
+		loss -= prob_target * log(std::max(prob_at_label, Dtype(FLT_MIN)))
+			+ (1 - prob_target) * log(std::max(prob_last, Dtype(FLT_MIN)));
+		loss += prob_target * log(std::max(prob_target, Dtype(FLT_MIN))) 
+			+ (1 - prob_target) * log(std::max(1 - prob_target, Dtype(FLT_MIN)));
 	}
 	(*top)[0]->mutable_cpu_data()[0] = loss / num; 
 	if (top->size() == 2) 
