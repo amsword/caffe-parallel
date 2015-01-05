@@ -17,22 +17,24 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
   const int width = datum.width();
   const int size = datum.channels() * datum.height() * datum.width();
 
-  const int crop_size = param_.crop_size();
+  int crop_size = param_.crop_size();
   const bool mirror = param_.mirror();
   const Dtype scale = param_.scale();
 
   if (mirror && crop_size == 0) {
-    LOG(FATAL) << "Current implementation requires mirror and crop_size to be "
-               << "set at the same time.";
+    //LOG(FATAL) << "Current implementation requires mirror and crop_size to be "
+               //<< "set at the same time.";
+	CHECK_EQ(height, width);
+	crop_size = height;
   }
 
   if (crop_size) {
-    CHECK(data.size()) << "Image cropping only support uint8 data";
+	  //CHECK(data.size()) << "Image cropping only support uint8 data";
     int h_off, w_off;
     // We only do random crop when we do training.
     if (phase_ == Caffe::TRAIN) {
-      h_off = Rand() % (height - crop_size);
-      w_off = Rand() % (width - crop_size);
+	  h_off = height == crop_size? 0 : (Rand() % (height - crop_size));
+	  w_off = width == crop_size ? 0 : (Rand() % (width - crop_size));
     } else {
       h_off = (height - crop_size) / 2;
       w_off = (width - crop_size) / 2;
@@ -45,8 +47,16 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
             int data_index = (c * height + h + h_off) * width + w + w_off;
             int top_index = ((batch_item_id * channels + c) * crop_size + h)
                 * crop_size + (crop_size - 1 - w);
-            Dtype datum_element =
-                static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
+			Dtype datum_element;
+			if (data.size())
+			{
+				datum_element =
+					static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
+			}
+			else
+			{
+				datum_element = datum.float_data(data_index);
+			}
             transformed_data[top_index] =
                 (datum_element - mean[data_index]) * scale;
           }
@@ -60,8 +70,16 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
             int top_index = ((batch_item_id * channels + c) * crop_size + h)
                 * crop_size + w;
             int data_index = (c * height + h + h_off) * width + w + w_off;
-            Dtype datum_element =
-                static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
+			Dtype datum_element;
+			if (data.size())
+			{
+				datum_element =
+					static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
+			}
+			else
+			{
+				datum_element = datum.float_data(data_index);
+			}
             transformed_data[top_index] =
                 (datum_element - mean[data_index]) * scale;
           }
