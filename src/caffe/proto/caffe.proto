@@ -160,6 +160,7 @@ message SolverParameter {
   optional bool snapshot_before_train = 92 [default = false];
   // update the parameter after iter ForwardBackward 
   optional int32 update_iter = 93 [default = 1];
+  optional float snapshot_best_lower_bound = 94 [default = -1]; // no snapshot if -1
 }
 
 // A message that stores the solver snapshots
@@ -353,6 +354,7 @@ message TransformationParameter {
   // Specify if we would like to randomly crop an image.
   optional uint32 crop_size = 3 [default = 0];
   optional string mean_file = 4;
+  optional uint32 padding = 10 [default = 0];
 }
 
 // Message that stores parameters used by CCCPLayer

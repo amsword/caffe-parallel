@@ -17,76 +17,84 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
   const int width = datum.width();
   const int size = datum.channels() * datum.height() * datum.width();
 
+  const int padding = param_.padding();
+  const int padded_width = width + padding * 2; // left and right
+  const int padded_height = height + padding * 2;
+
   int crop_size = param_.crop_size();
   const bool mirror = param_.mirror();
   const Dtype scale = param_.scale();
 
-  if (mirror && crop_size == 0) {
+  if (mirror && crop_size == 0) 
+  {
     //LOG(FATAL) << "Current implementation requires mirror and crop_size to be "
                //<< "set at the same time.";
 	CHECK_EQ(height, width);
 	crop_size = height;
   }
 
-  if (crop_size) {
+  if (crop_size) 
+  {
 	  //CHECK(data.size()) << "Image cropping only support uint8 data";
     int h_off, w_off;
     // We only do random crop when we do training.
     if (phase_ == Caffe::TRAIN) {
-	  h_off = height == crop_size? 0 : (Rand() % (height - crop_size));
-	  w_off = width == crop_size ? 0 : (Rand() % (width - crop_size));
+	  h_off = padded_height == crop_size? 0 : (Rand() % (padded_height - crop_size));
+	  w_off = padded_width == crop_size ? 0 : (Rand() % (padded_width - crop_size));
     } else {
-      h_off = (height - crop_size) / 2;
-      w_off = (width - crop_size) / 2;
+      h_off = (padded_height - crop_size) / 2;
+      w_off = (padded_width - crop_size) / 2;
     }
-    if (mirror && Rand() % 2) {
-      // Copy mirrored version
-      for (int c = 0; c < channels; ++c) {
-        for (int h = 0; h < crop_size; ++h) {
-          for (int w = 0; w < crop_size; ++w) {
-            int data_index = (c * height + h + h_off) * width + w + w_off;
-            int top_index = ((batch_item_id * channels + c) * crop_size + h)
-                * crop_size + (crop_size - 1 - w);
-			Dtype datum_element;
-			if (data.size())
+	const bool is_mirror = mirror && Rand() % 2;
+	for (int c = 0; c < channels; ++c) 
+	{
+		for (int h = 0; h < crop_size; ++h) 
+		{
+			for (int w = 0; w < crop_size; ++w) 
 			{
-				datum_element =
-					static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
+				Dtype datum_element;
+				Dtype mean_value;
+				int h_in_real = h + h_off - padding;
+				int w_in_real = w + w_off - padding;
+				if (h_in_real < 0 || w_in_real < 0 || h_in_real >= height || w_in_real >= width)
+				{
+					datum_element = 0;
+					mean_value = 0;
+				}
+				else
+				{
+					int data_index = (c * height + h_in_real) * width + w_in_real;
+					if (data.size())
+					{
+						datum_element =
+							static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
+					}
+					else
+					{
+						datum_element = datum.float_data(data_index);
+					}
+					mean_value = mean[data_index];
+				}
+				int top_index;
+				if (is_mirror)
+				{
+					top_index = ((batch_item_id * channels + c) * crop_size + h)
+						* crop_size + (crop_size - 1 - w);
+				}
+				else
+				{
+					top_index = ((batch_item_id * channels + c) * crop_size + h)
+						* crop_size + w;
+				}
+				transformed_data[top_index] =
+					(datum_element - mean_value) * scale;
 			}
-			else
-			{
-				datum_element = datum.float_data(data_index);
-			}
-            transformed_data[top_index] =
-                (datum_element - mean[data_index]) * scale;
-          }
-        }
-      }
-    } else {
-      // Normal copy
-      for (int c = 0; c < channels; ++c) {
-        for (int h = 0; h < crop_size; ++h) {
-          for (int w = 0; w < crop_size; ++w) {
-            int top_index = ((batch_item_id * channels + c) * crop_size + h)
-                * crop_size + w;
-            int data_index = (c * height + h + h_off) * width + w + w_off;
-			Dtype datum_element;
-			if (data.size())
-			{
-				datum_element =
-					static_cast<Dtype>(static_cast<uint8_t>(data[data_index]));
-			}
-			else
-			{
-				datum_element = datum.float_data(data_index);
-			}
-            transformed_data[top_index] =
-                (datum_element - mean[data_index]) * scale;
-          }
-        }
-      }
-    }
-  } else {
+		}
+	}
+  } 
+  else 
+  {
+	  CHECK_EQ(padding, 0);
     // we will prefer to use data() first, and then try float_data()
     if (data.size()) {
       for (int j = 0; j < size; ++j) {

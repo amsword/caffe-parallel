@@ -236,6 +236,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
   if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
     TestAll();
   }
+  LOG(INFO) << "best score: " << param_.snapshot_best_lower_bound();
   LOG(INFO) << "Optimization Done.";
 }
 
@@ -303,6 +304,11 @@ void Solver<Dtype>::Test(const int test_net_id) {
     }
     LOG(INFO) << "    Test net output #" << i << ": " << output_name << " = "
         << mean_score << loss_msg_stream.str();
+	if (param_.snapshot_best_lower_bound() > 0 && mean_score > param_.snapshot_best_lower_bound())
+	{
+		Snapshot();
+		param_.set_snapshot_best_lower_bound(mean_score);
+	}
   }
   Caffe::set_phase(Caffe::TRAIN);
 }
