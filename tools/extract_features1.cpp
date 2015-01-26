@@ -102,14 +102,10 @@ int feature_extraction_pipeline(int argc, char** argv) {
         << " in the network " << feature_extraction_proto;
   }
 
-  leveldb::Options options;
-  options.error_if_exists = true;
-  options.create_if_missing = true;
-  options.write_buffer_size = 268435456;
   //vector<shared_ptr<leveldb::DB> > feature_dbs;
   vector<FILE* > feature_dbs;
   for (size_t i = 0; i < num_features; ++i) {
-    LOG(INFO)<< "Opening leveldb " << leveldb_names[i];
+    LOG(INFO)<< "Opening save file: " << leveldb_names[i];
 	FILE* fp = fopen(leveldb_names[i].c_str(), "wb");
 	CHECK(fp) << leveldb_names[i];
 	feature_dbs.push_back(fp);
