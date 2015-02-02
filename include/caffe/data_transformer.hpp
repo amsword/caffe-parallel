@@ -13,10 +13,7 @@ namespace caffe {
 template <typename Dtype>
 class DataTransformer {
  public:
-  explicit DataTransformer(const TransformationParameter& param)
-    : param_(param) {
-    phase_ = Caffe::phase();
-  }
+  explicit DataTransformer(const TransformationParameter& param);
   virtual ~DataTransformer() {}
 
   void InitRand();
@@ -37,13 +34,21 @@ class DataTransformer {
    */
   void Transform(const int batch_item_id, const Datum& datum,
                  const Dtype* mean, Dtype* transformed_data);
-
+  
+  void Transform(const int batch_item_id, const Datum& datum, 
+          const Dtype* mean, Dtype* transformed_data, 
+          const int crop_size, const int cover_size, 
+          int h_off, int w_off, bool is_mirror, bool is_random_rotate);
+  
  protected:
   virtual unsigned int Rand();
+  Dtype RandAngle();
 
   // Tranformation parameters
   TransformationParameter param_;
 
+  std::vector<Dtype> mean_values_;
+  Dtype scale_;
 
   shared_ptr<Caffe::RNG> rng_;
   Caffe::Phase phase_;

@@ -34,7 +34,7 @@ int feature_extraction_pipeline(int argc, char** argv) {
     LOG(ERROR)<<
     "This program takes in a trained network and an input data layer, and then"
     " extract features of the input data produced by the net.\n"
-    "Usage: extract_features  pretrained_net_param"
+    "Usage: extract_features1  pretrained_net_param"
     "  feature_extraction_proto_file  extract_feature_blob_name1[,name2,...]"
     "  save_feature_leveldb_name1[,name2,...]  num_mini_batches phase [CPU/GPU]"
     "  [DEVICE_ID=0]\n"
@@ -119,10 +119,8 @@ int feature_extraction_pipeline(int argc, char** argv) {
   timer.Start();
   vector<Blob<float>*> input_vec;
   vector<int> image_indices(num_features, 0);
-  for (int batch_index = 0; batch_index < num_mini_batches; ++batch_index)
-  {
-	  if (timer.MilliSeconds() >= 2000)
-	  {
+  for (int batch_index = 0; batch_index < num_mini_batches; ++batch_index) {
+	  if (timer.MilliSeconds() >= 2000) {
 		  LOG(INFO) << batch_index;
 		  timer.Start();
 	  }

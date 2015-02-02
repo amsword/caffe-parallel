@@ -27,8 +27,8 @@ void BaseDataLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   CHECK_GT(datum_height_, 0);
   CHECK_GT(datum_width_, 0);
   if (transform_param_.crop_size() > 0) {
-    CHECK_GE(datum_height_, transform_param_.crop_size());
-    CHECK_GE(datum_width_, transform_param_.crop_size());
+    //CHECK_GE(datum_height_ + 2 * transform_param_.padding(), transform_param_.crop_size());
+    //CHECK_GE(datum_width_ + 2 * transform_param_.padding(), transform_param_.crop_size());
   }
   // check if we want to have mean
   if (transform_param_.has_mean_file()) {
@@ -71,6 +71,8 @@ void BasePrefetchingDataLayer<Dtype>::CreatePrefetchThread() {
   this->phase_ = Caffe::phase();
   this->data_transformer_.InitRand();
   CHECK(StartInternalThread()) << "Thread execution failed";
+  //JoinPrefetchThread();
+  //LOG(INFO) << "comment it";
 }
 
 template <typename Dtype>

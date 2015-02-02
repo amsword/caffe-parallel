@@ -130,9 +130,10 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << (*top)[0]->width();
   // label
   if (this->output_labels_) {
-    (*top)[1]->Reshape(this->layer_param_.data_param().batch_size(), 1, 1, 1);
+      int label_size = datum.labels_size() != 0? datum.labels_size() : 1;
+    (*top)[1]->Reshape(this->layer_param_.data_param().batch_size(), label_size, 1, 1);
     this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(),
-        1, 1, 1);
+        label_size, 1, 1);
   }
   // datum size
   this->datum_channels_ = datum.channels();
@@ -148,8 +149,10 @@ void DataLayer<Dtype>::InternalThreadEntry() {
   CHECK(this->prefetch_data_.count());
   Dtype* top_data = this->prefetch_data_.mutable_cpu_data();
   Dtype* top_label = NULL;  // suppress warnings about uninitialized variables
+  int label_size = 1;
   if (this->output_labels_) {
     top_label = this->prefetch_label_.mutable_cpu_data();
+    label_size = this->prefetch_label_.channels();
   }
   const int batch_size = this->layer_param_.data_param().batch_size();
 
@@ -175,7 +178,18 @@ void DataLayer<Dtype>::InternalThreadEntry() {
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
 
     if (this->output_labels_) {
-      top_label[item_id] = datum.label();
+        if (datum.labels_size() != 0) // first to use this kind of label
+        {
+            CHECK_EQ(datum.labels_size(), label_size);
+            for (int i = 0; i < label_size; i++)
+            {
+                top_label[item_id * label_size + i] = datum.labels(i);
+            }
+        }
+        else
+        {
+            top_label[item_id] = datum.label();
+        }
     }
 
     // go to the next iter

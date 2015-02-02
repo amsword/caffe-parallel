@@ -26,6 +26,8 @@ message Datum {
   optional int32 label = 5;
   // Optionally, the datum could also hold float data.
   repeated float float_data = 6;
+  repeated int32 labels = 7; // if it is set, the label=5 is ignored; the length should be the number of total 
+  // classes. if it is 1, it
 }
 
 message FillerParameter {
@@ -269,6 +271,7 @@ message LayerParameter {
 	CCCP = 409;
 	SF = 217;
 	SOFTMAX_PLUS1_LOSS = 218;
+    MULTILABEL_ACCURACY = 219;
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -297,6 +300,7 @@ message LayerParameter {
   // to each top blob.
   repeated float loss_weight = 35;
 
+  optional MultiLabelAccuracyParameter multilabel_accuracy_param = 412;
   optional SFParameter sf_param = 410;
   optional Plus1LossParameter sp1_param = 411;
   optional CCCPParameter cccp_param = 41;
@@ -355,6 +359,9 @@ message TransformationParameter {
   optional uint32 crop_size = 3 [default = 0];
   optional string mean_file = 4;
   optional uint32 padding = 10 [default = 0];
+  repeated float mean_values = 11;
+  optional uint32 cover_size = 12 [default = 0]; // 0 means, it is equal with crop_size
+  optional bool random_rotate = 13 [default = false];
 }
 
 // Message that stores parameters used by CCCPLayer
@@ -365,6 +372,14 @@ message CCCPParameter {
   optional FillerParameter weight_filler = 4; // The filler for the weight
   optional FillerParameter bias_filler = 5; // The filler for the bias
 }
+message MultiLabelAccuracyParameter {
+    enum RankType {
+        IMAGE = 1;
+    }
+    optional RankType rank_type = 1 [default = IMAGE];
+    optional uint32 test_iter = 2 [default = 0];
+}
+
 // Message that stores parameters used by AccuracyLayer
 message AccuracyParameter {
   // When computing accuracy, count as correct by comparing the true label to

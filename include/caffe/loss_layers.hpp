@@ -15,6 +15,36 @@ namespace caffe {
 
 const float kLOG_THRESHOLD = 1e-20;
 
+template <typename Dtype>
+class MultiLabelAccuracyLayer : public Layer<Dtype> {
+ public:
+  explicit MultiLabelAccuracyLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_MULTILABEL_ACCURACY;
+  }
+
+  virtual inline int ExactNumBottomBlobs() const { return 2; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
+    for (int i = 0; i < propagate_down.size(); ++i) {
+      if (propagate_down[i]) { NOT_IMPLEMENTED; }
+    }
+  }
+  vector<shared_ptr<Blob<Dtype> > > vec_blobs_;
+  int iter_;
+};
 /**
  * @brief Computes the classification accuracy for a one-of-many
  *        classification task.
@@ -359,6 +389,10 @@ class HingeLossLayer : public LossLayer<Dtype> {
   /// @copydoc HingeLossLayer
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
+  void Forward_cpu_single(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  void Forward_cpu_multi(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
 
   /**
    * @brief Computes the hinge loss error gradient w.r.t. the predictions.
@@ -389,6 +423,10 @@ class HingeLossLayer : public LossLayer<Dtype> {
    */
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+  void Backward_cpu_single(const vector<Blob<Dtype>*>& top,
+      vector<Blob<Dtype>*>* bottom);
+  void Backward_cpu_multi(const vector<Blob<Dtype>*>& top,
+      vector<Blob<Dtype>*>* bottom);
 };
 
 /**
