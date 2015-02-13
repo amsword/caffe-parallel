@@ -2,6 +2,7 @@
 #define CAFFE_COMMON_HPP_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/tss.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
@@ -72,6 +73,7 @@ class Caffe {
   ~Caffe();
   inline static Caffe& Get() {
     if (!singleton_.get()) {
+        LOG(INFO) << "create singleton";
       singleton_.reset(new Caffe());
     }
     return *singleton_;
@@ -128,7 +130,11 @@ class Caffe {
   // Prints the current GPU status.
   static void DeviceQuery();
 
- protected:
+  static int GetDeviceID();
+  static void PrintDebugInfo();
+  static int GetThreadID();
+  static void SetThreadID(int id);
+  //protected:
 #ifndef CPU_ONLY
   cublasHandle_t cublas_handle_;
   curandGenerator_t curand_generator_;
@@ -137,7 +143,9 @@ class Caffe {
 
   Brew mode_;
   Phase phase_;
-  static shared_ptr<Caffe> singleton_;
+  //static shared_ptr<Caffe> singleton_;
+  static boost::thread_specific_ptr<Caffe> singleton_;
+  int thread_id_;
 
  private:
   // The private constructor to avoid duplicate instantiation.

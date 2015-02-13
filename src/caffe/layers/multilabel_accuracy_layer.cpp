@@ -42,10 +42,7 @@ void MultiLabelAccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
     int batch_size = bottom[0]->num();
     int label_size = bottom[0]->count() / bottom[0]->num();
     int test_iter = this->layer_param_.multilabel_accuracy_param().test_iter();
-    const Dtype* bottom_data = bottom[0]->cpu_data();
 
-    int start_index = iter_ * label_size;
-    int end_index = start_index + label_size;
     for (int i = 0; i < 2; i++) {
         caffe_copy(bottom[i]->count(), bottom[i]->cpu_data(), 
                 vec_blobs_[i]->mutable_cpu_data() + iter_ * bottom[i]->count());

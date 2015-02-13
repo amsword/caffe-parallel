@@ -1,0 +1,4 @@
+file build/tools/caffe
+run train --solver=/home/wangjianfeng/code/mycode/examples/test_code_only/cifar10_solver.prototxt
+build/tools/caffe train --solver=/home/wangjianfeng/code/mycode/examples/test_code_only/cifar10_solver.prototxt
+

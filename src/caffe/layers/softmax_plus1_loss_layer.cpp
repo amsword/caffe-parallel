@@ -126,7 +126,6 @@ void SoftmaxPlus1LossLayer<Dtype>::test_bottom_diff()
 		*(label_data->mutable_cpu_data() + n) = 2;
 	}
 
-	LOG(INFO);
 	shared_ptr<Blob<Dtype> > out_data(new Blob<Dtype>(1, 1, 1, 1));
 	*out_data->mutable_cpu_diff() = 1;
 	vector<Blob<Dtype>* > top(1);
@@ -138,7 +137,6 @@ void SoftmaxPlus1LossLayer<Dtype>::test_bottom_diff()
 	vector<bool> propagate_down(1);
 	propagate_down[0] = true;
 	Backward_cpu(top, propagate_down, &bottom);
-	LOG(INFO);
 	Dtype eps = 0.000001;
 	Dtype s = 0;
 	for (int n = 0; n < num; n++)
@@ -162,8 +160,6 @@ void SoftmaxPlus1LossLayer<Dtype>::test_bottom_diff()
 		}
 	}
 	LOG(INFO) << s;
-	LOG(INFO);
-	LOG(FATAL);
 }
 
 #ifdef CPU_ONLY

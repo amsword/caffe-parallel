@@ -76,7 +76,44 @@ void Solver<Dtype>::InitTrainNet() {
   net_state.MergeFrom(net_param.state());
   net_state.MergeFrom(param_.train_state());
   net_param.mutable_state()->CopyFrom(net_state);
-  net_.reset(new Net<Dtype>(net_param));
+
+  //net_.reset(new Net<Dtype>(net_param));
+  vector<int> vec_device_id;
+  if (param_.has_device_id()) {
+      vec_device_id.push_back(param_.device_id());
+  }
+  if (param_.device_ids_size()) {
+      for (int i = 0; i < param_.device_ids_size(); i++) {
+          vec_device_id.push_back(param_.device_ids(i));
+      }
+  }
+  if (vec_device_id.size() == 0) {
+      vec_device_id.push_back(0);
+  }
+  vector<int> vec_random_seeds;
+  if (param_.has_random_seed()) {
+      vec_random_seeds.push_back(param_.random_seed());
+  }
+  if (param_.random_seeds_size()) {
+      for (size_t i = 0; i < param_.random_seeds_size(); i++) {
+          vec_random_seeds.push_back(param_.random_seeds(i));
+      }
+  }
+  if (vec_random_seeds.size() == 0) {
+      vec_random_seeds.resize(vec_device_id.size(), -1);
+  } else if (vec_random_seeds.size() != vec_device_id.size()) {
+      LOG(INFO) << vec_random_seeds.size();
+      LOG(INFO) << vec_device_id.size();
+      LOG(INFO) << vec_device_id.size() - vec_random_seeds.size();
+
+      int anchor = vec_random_seeds[vec_random_seeds.size() - 1];
+      size_t num_appended = vec_device_id.size() - vec_random_seeds.size();
+      for (size_t i = 0; i < num_appended; i++) {
+          vec_random_seeds.push_back(anchor);
+      }
+  }
+  CHECK_EQ(vec_random_seeds.size(), vec_device_id.size());
+  net_.reset(new NetParallel<Dtype>(net_param, vec_device_id, vec_random_seeds));
 }
 
 template <typename Dtype>
@@ -229,9 +266,9 @@ void Solver<Dtype>::Solve(const char* resume_file) {
   // updated the parameters "max_iter" times -- this final pass is only done to
   // display the loss, which is computed in the forward pass.
   if (param_.display() && iter_ % param_.display() == 0) {
-    Dtype loss;
-    net_->Forward(bottom_vec, &loss);
-    LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
+    //Dtype loss;
+    //net_->Forward(bottom_vec, &loss); // in the multi-thread, Forward is not well supported
+    //LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
   }
   if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
     TestAll();

@@ -7,8 +7,8 @@
 
 namespace caffe {
 
-shared_ptr<Caffe> Caffe::singleton_;
-
+    //shared_ptr<Caffe> Caffe::singleton_;
+    boost::thread_specific_ptr<Caffe> Caffe::singleton_;
 // random seeding
 int64_t cluster_seedgen(void) {
   int64_t s, seed, pid;
@@ -40,7 +40,7 @@ void GlobalInit(int* pargc, char*** pargv) {
 #ifdef CPU_ONLY  // CPU-only Caffe.
 
 Caffe::Caffe()
-    : random_generator_(), mode_(Caffe::CPU), phase_(Caffe::TRAIN) { }
+    : random_generator_(), mode_(Caffe::CPU), phase_(Caffe::TRAIN), thread_id_(0) { }
 
 Caffe::~Caffe() { }
 
@@ -84,7 +84,7 @@ void* Caffe::RNG::generator() {
 
 Caffe::Caffe()
     : cublas_handle_(NULL), curand_generator_(NULL), random_generator_(),
-    mode_(Caffe::CPU), phase_(Caffe::TRAIN) {
+    mode_(Caffe::CPU), phase_(Caffe::TRAIN), thread_id_ (0) {
   // Try to create a cublas handler, and report an error if failed (but we will
   // keep the program running as one might just want to run CPU code).
   if (cublasCreate(&cublas_handle_) != CUBLAS_STATUS_SUCCESS) {
@@ -122,6 +122,30 @@ void Caffe::set_random_seed(const unsigned int seed) {
   }
   // RNG seed
   Get().random_generator_.reset(new RNG(seed));
+}
+
+int Caffe::GetThreadID() {
+    return Get().thread_id_;
+}
+
+void Caffe::SetThreadID(int id) {
+    Get().thread_id_ = id;
+}
+
+void Caffe::PrintDebugInfo() {
+    LOG(FATAL);
+  int current_device;
+  CUDA_CHECK(cudaGetDevice(&current_device));
+  LOG(INFO) << "device_id: " << current_device;
+  LOG(INFO) << "ptr addr: " << (long long)(&Get());
+  LOG(INFO) << "mode: " << Get().mode_ << ". " << Caffe::CPU << "/"
+      << Caffe::GPU;
+}
+
+int Caffe::GetDeviceID() {
+  int current_device;
+  CUDA_CHECK(cudaGetDevice(&current_device));
+  return current_device;
 }
 
 void Caffe::SetDevice(const int device_id) {

@@ -46,6 +46,7 @@ DataType BilinearInter(const DataType* data, int c, PositionType h, PositionType
             ImageElement(data, c, lower_h + 1, lower_w + 1, height, width) * off_h * off_w;
     }
 }
+
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const int batch_item_id, const Datum& datum, 
           const Dtype* mean, Dtype* transformed_data, 
@@ -63,7 +64,9 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id, const Datum& dat
      sin_angle = std::sin(angle);
   }
   Dtype ratio = (Dtype)cover_size / (Dtype)crop_size;
-  const unsigned char* udata = (const unsigned char*)datum.data().c_str();
+  const unsigned char* udata = NULL;
+  // note: even if the size if 0, the result c_str() is not NULL;
+  if (datum.data().size()) udata = (const unsigned char*)datum.data().c_str();
   const float* fdata = datum.float_data().data();
   const int channels = datum.channels();
 

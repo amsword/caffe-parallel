@@ -23,6 +23,7 @@ namespace caffe {
 template <typename Dtype>
 class Net {
  public:
+  Net() {}; // for NetThread
   explicit Net(const NetParameter& param);
   explicit Net(const string& param_file);
   virtual ~Net() {}
@@ -82,7 +83,7 @@ class Net {
     return loss;
   }
 
-  Dtype ForwardBackward(const vector<Blob<Dtype>* > & bottom, int num_iter);
+  virtual Dtype ForwardBackward(const vector<Blob<Dtype>* > & bottom, int num_iter);
 
   /// @brief Updates the network weights based on the diff values computed.
   void Update();

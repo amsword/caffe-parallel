@@ -70,8 +70,8 @@ flags = [
 '-isystem',
 '../llvm/tools/clang/include',
 '-I',
-'-I./include/',
 '.',
+'-I./include/',
 '-I',
 './ClangCompleter',
 '-isystem',
@@ -87,7 +87,7 @@ flags = [
 '-isystem',
 '/usr/local/include',
 '-isystem',
-'/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1',
+'/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/c++/v1',
 '-isystem',
 '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include',
 ]

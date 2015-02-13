@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "caffe/net.hpp"
+#include "caffe/net_thread.hpp"
 
 namespace caffe {
 

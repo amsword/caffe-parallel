@@ -104,6 +104,42 @@ void caffe_gpu_axpy<double>(const int N, const double alpha, const double* X,
   CUBLAS_CHECK(cublasDaxpy(Caffe::cublas_handle(), N, &alpha, X, 1, Y, 1));
 }
 
+void caffe_enable_peer_access(int device_id) {
+  CUDA_CHECK(cudaDeviceEnablePeerAccess(device_id, 0));
+}
+
+template <typename Dtype>
+void caffe_device_copy_asyc(const int N, const Dtype *X, const int from_device_id,
+        Dtype* Y, const int to_device_id) {
+    if (from_device_id >= 0 && to_device_id >= 0) {
+        CUDA_CHECK(cudaMemcpyPeerAsync(Y, to_device_id, X, from_device_id, N * sizeof(Dtype)));
+    } else if (from_device_id < 0 && to_device_id >= 0) { 
+        int current_device;
+        CUDA_CHECK(cudaGetDevice(&current_device));
+        CUDA_CHECK(cudaSetDevice(to_device_id));
+        CUDA_CHECK(cudaMemcpyAsync(Y, X, sizeof(Dtype) * N, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaSetDevice(current_device));
+    } else if (from_device_id < 0 && to_device_id < 0){
+        memcpy(Y, X, sizeof(Dtype) * N);
+    } else {
+        int current_device;
+        CUDA_CHECK(cudaGetDevice(&current_device));
+        CUDA_CHECK(cudaSetDevice(from_device_id));
+        CUDA_CHECK(cudaMemcpyAsync(Y, X, sizeof(Dtype) * N, cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaSetDevice(current_device));
+    }
+}
+
+template void caffe_device_copy_asyc<float>(const int N, const float *X, const int from_device_id,
+        float* Y, const int to_device_id);
+
+template void caffe_device_copy_asyc<double>(const int N, const double *X, const int from_device_id,
+        double* Y, const int to_device_id);
+
+void caffe_device_asyc_copy_sync() {
+    CUDA_CHECK(cudaDeviceSynchronize());
+}
+
 void caffe_gpu_memcpy(const size_t N, const void* X, void* Y) {
   if (X != Y) {
     CUDA_CHECK(cudaMemcpy(Y, X, N, cudaMemcpyDefault));  // NOLINT(caffe/alt_fn)

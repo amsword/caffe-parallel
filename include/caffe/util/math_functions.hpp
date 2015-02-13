@@ -39,6 +39,16 @@ void caffe_cpu_axpby(const int N, const Dtype alpha, const Dtype* X,
 template <typename Dtype>
 void caffe_copy(const int N, const Dtype *X, Dtype *Y);
 
+// ------------------------------------------
+void caffe_enable_peer_access(int device_id);
+
+template <typename Dtype>
+void caffe_device_copy_asyc(const int N, const Dtype *X, const int from_device_id,
+        Dtype* Y, const int to_device_id);
+
+void caffe_device_asyc_copy_sync();
+
+// -----------------------------------------
 template <typename Dtype>
 void caffe_set(const int N, const Dtype alpha, Dtype *X);
 
