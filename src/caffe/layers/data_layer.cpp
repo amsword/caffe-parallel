@@ -113,12 +113,15 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
 
   // image
   int crop_size = this->layer_param_.transform_param().crop_size();
+  int num_crops = this->data_transformer_.TotalCrops();
   if (crop_size > 0) {
-    (*top)[0]->Reshape(this->layer_param_.data_param().batch_size(),
+      CHECK_GE(num_crops, 1);
+    (*top)[0]->Reshape(this->layer_param_.data_param().batch_size() * num_crops,
                        datum.channels(), crop_size, crop_size);
-    this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size(),
+    this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size() * num_crops,
         datum.channels(), crop_size, crop_size);
   } else {
+      CHECK_EQ(num_crops, 1);
     (*top)[0]->Reshape(
         this->layer_param_.data_param().batch_size(), datum.channels(),
         datum.height(), datum.width());

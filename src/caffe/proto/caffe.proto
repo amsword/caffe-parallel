@@ -362,8 +362,9 @@ message TransformationParameter {
   optional string mean_file = 4;
   optional uint32 padding = 10 [default = 0];
   repeated float mean_values = 11;
-  optional uint32 cover_size = 12 [default = 0]; // 0 means, it is equal with crop_size
-  optional bool random_rotate = 13 [default = false];
+  repeated uint32 cover_size = 12;  // 0 means, it is equal with crop_size
+  repeated uint32 grid_dim = 13;
+  optional bool random_rotate = 14 [default = false];
 }
 
 // Message that stores parameters used by CCCPLayer

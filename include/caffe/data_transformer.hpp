@@ -35,11 +35,12 @@ class DataTransformer {
   void Transform(const int batch_item_id, const Datum& datum,
                  const Dtype* mean, Dtype* transformed_data);
   
-  void Transform(const int batch_item_id, const Datum& datum, 
+  void Transform(const Datum& datum, 
           const Dtype* mean, Dtype* transformed_data, 
           const int crop_size, const int cover_size, 
           int h_off, int w_off, bool is_mirror, bool is_random_rotate);
   
+  int TotalCrops();
  protected:
   virtual unsigned int Rand();
   Dtype RandAngle();
@@ -47,6 +48,7 @@ class DataTransformer {
   // Tranformation parameters
   TransformationParameter param_;
 
+  int total_crops_;
   std::vector<Dtype> mean_values_;
   Dtype scale_;
 

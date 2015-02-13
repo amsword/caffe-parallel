@@ -72,7 +72,7 @@ void BasePrefetchingDataLayer<Dtype>::CreatePrefetchThread() {
   this->data_transformer_.InitRand();
   CHECK(StartInternalThread()) << "Thread execution failed";
   //JoinPrefetchThread();
-  //LOG(INFO) << "comment it";
+  //LOG(FATAL) << "comment it";
 }
 
 template <typename Dtype>
