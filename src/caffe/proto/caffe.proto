@@ -274,6 +274,7 @@ message LayerParameter {
 	SF = 217;
 	SOFTMAX_PLUS1_LOSS = 218;
     MULTILABEL_ACCURACY = 219;
+    CROP_POOLING = 220;
   }
   optional LayerType type = 5; // the layer type from the enum above
 
@@ -302,6 +303,7 @@ message LayerParameter {
   // to each top blob.
   repeated float loss_weight = 35;
 
+  optional CropPoolingParameter crop_pooling_param = 413;
   optional MultiLabelAccuracyParameter multilabel_accuracy_param = 412;
   optional SFParameter sf_param = 410;
   optional Plus1LossParameter sp1_param = 411;
@@ -620,6 +622,13 @@ message MVNParameter {
 
   // This parameter can be set to true to perform DNN-like MVN
   optional bool across_channels = 2 [default = false];
+}
+
+message CropPoolingParameter {
+    enum PoolMethod {
+        MAX = 0;
+    }
+    optional PoolMethod pool = 1 [default = MAX];
 }
 
 // Message that stores parameters used by PoolingLayer
