@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <iomanip>
 #include <functional>
 #include <utility>
 #include <vector>
@@ -13,15 +14,8 @@ namespace caffe {
 template <typename Dtype>
 void MultiLabelAccuracyLayer<Dtype>::LayerSetUp(
   const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
-}
-
-template <typename Dtype>
-void MultiLabelAccuracyLayer<Dtype>::Reshape(
-  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
   CHECK_EQ(bottom[0]->num(), bottom[1]->num())
       << "The data and label should have the same number.";
-  (*top)[0]->Reshape(1, 1, 1, 1);
-
   int batch_size = bottom[0]->num();
   int num_batch = this->layer_param_.multilabel_accuracy_param().test_iter();
   int label_size = bottom[1]->count() / bottom[1]->num();
@@ -32,6 +26,11 @@ void MultiLabelAccuracyLayer<Dtype>::Reshape(
     vec_blobs_[i].reset(new Blob<Dtype>(batch_size * num_batch, label_size, 1, 1));
   }
   iter_ = 0; 
+}
+
+template <typename Dtype>
+void MultiLabelAccuracyLayer<Dtype>::Reshape(
+  const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
 }
 
 template <typename Dtype>
@@ -58,7 +57,7 @@ void MultiLabelAccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
 
         for (int i = 0; i < label_size; i++) {
             for (int j = 0; j < total_image; j++) {
-                vec_pair[i] = std::pair<Dtype, int>(*(bottom_data + j * label_size + i), j);
+                vec_pair[j] = std::pair<Dtype, int>(*(bottom_data + j * label_size + i), j);
             }
             std::sort(vec_pair.begin(), vec_pair.end(), std::greater<std::pair<Dtype, int> >());
             int num_correct = 0;
@@ -76,7 +75,11 @@ void MultiLabelAccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
                     num_retrieved++;
                 }
             }
-            ap /= (Dtype)num_correct;
+            if (num_correct != 0) {
+                ap /= (Dtype)num_correct;
+            } else {
+                LOG(INFO) << "strange, not correct for " << i;
+            }
             vec_ap[i] = ap;
         }
         Dtype map = 0;
@@ -84,14 +87,10 @@ void MultiLabelAccuracyLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bot
             map += vec_ap[i];
         }
         map /= (Dtype)label_size;
-        string str = "";
         for (int i = 0; i < label_size; i++) {
-            stringstream ss;
-            ss << vec_ap[i];
-            str = str + ss.str() + "\t";
+            LOG(INFO) << std::setw(3) << i << "\t" << vec_ap[i];
         }
-        LOG(INFO) << "ap(s): " << str;
-        LOG(INFO) << "map: " << map;
+        LOG(INFO) << "accuracy = " << map;
         iter_ = 0;
     }
 }

@@ -30,7 +30,7 @@ class MultiLabelAccuracyLayer : public Layer<Dtype> {
   }
 
   virtual inline int ExactNumBottomBlobs() const { return 2; }
-  virtual inline int ExactNumTopBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 0; }
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,

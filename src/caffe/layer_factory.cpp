@@ -259,6 +259,10 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new SoftmaxPlus1LossLayer<Dtype>(param);
   case LayerParameter_LayerType_CROP_POOLING:
     return new CropPoolingLayer<Dtype>(param);
+  case LayerParameter_LayerType_MULTILABEL_ACCURACY:
+    return new MultiLabelAccuracyLayer<Dtype>(param);
+  case LayerParameter_LayerType_NORMALIZATION:
+    return new NormalizationLayer<Dtype>(param);
   case LayerParameter_LayerType_NONE:
     LOG(FATAL) << "Layer " << name << " has unspecified type.";
   default:

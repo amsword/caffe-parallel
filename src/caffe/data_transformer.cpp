@@ -10,6 +10,7 @@ template<typename Dtype>
 DataTransformer<Dtype>::DataTransformer(const TransformationParameter& param) 
     :param_(param), total_crops_(0) {
     phase_ = Caffe::phase();
+    LOG(INFO) << phase_;
 
     scale_ = param_.scale();
     if (param_.mean_values_size() != 0) {
@@ -237,26 +238,6 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
           //fclose(fp);
           //CHECK_LE(batch_item_id, 10);
       //}
-  //}
-  //} 
-  //else 
-  //{
-	  //CHECK_EQ(padding, 0);
-      //CHECK_EQ(param_.mean_values_size(), 0);
-    //// we will prefer to use data() first, and then try float_data()
-    //if (data.size()) {
-      //for (int j = 0; j < size; ++j) {
-        //Dtype datum_element =
-            //static_cast<Dtype>(static_cast<uint8_t>(data[j]));
-        //transformed_data[j + batch_item_id * size] =
-            //(datum_element - mean[j]) * scale;
-      //}
-    //} else {
-      //for (int j = 0; j < size; ++j) {
-        //transformed_data[j + batch_item_id * size] =
-            //(datum.float_data(j) - mean[j]) * scale;
-      //}
-    //}
   //}
 }
 

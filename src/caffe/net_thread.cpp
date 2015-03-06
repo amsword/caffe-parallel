@@ -199,11 +199,13 @@ void NetParallel<Dtype>::CollectParameter() {
     size_t num_params = this->params().size();
 
     if (vec_buffer_.size() == 0) {
+        size_t total_storage = 0;
         vec_buffer_.resize(num_params);
         size_t num_threads = vec_nets_.size();
         if (num_threads) {
             for (size_t i = 0; i < num_params; i++) {
                 vec_buffer_[i].reset(new Blob<Dtype>(this->params()[i]->count() * num_threads, 1, 1, 1));
+                total_storage += this->params()[i]->count() * num_threads;
                 if (this->device_id_ == -1) {
                     vec_buffer_[i]->mutable_cpu_data();
                 } else {
@@ -211,6 +213,8 @@ void NetParallel<Dtype>::CollectParameter() {
                 }
             }
         }
+        LOG(INFO) << "auxiliary storage: " << total_storage * sizeof(Dtype) / 1024.0 / 1024.0 / 1024.0 
+            << "GB";
     }
 
     for (size_t i = 0; i < vec_nets_.size(); i++) {

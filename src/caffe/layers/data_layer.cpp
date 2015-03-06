@@ -77,6 +77,7 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
   if (this->layer_param_.data_param().rand_skip()) {
     unsigned int skip = caffe_rng_rand() %
                         this->layer_param_.data_param().rand_skip();
+    //skip = this->layer_param_.data_param().batch_size() * Caffe::GetThreadID(); 
     LOG(INFO) << "Skipping first " << skip << " data points.";
     while (skip-- > 0) {
       switch (this->layer_param_.data_param().backend()) {
@@ -120,6 +121,11 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
                        datum.channels(), crop_size, crop_size);
     this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size() * num_crops,
         datum.channels(), crop_size, crop_size);
+
+    this->datum_channels_ = datum.channels();
+    this->datum_height_ = crop_size;
+    this->datum_width_ = crop_size; 
+    this->datum_size_ = datum.channels() * crop_size * crop_size;
   } else {
       CHECK_EQ(num_crops, 1);
     (*top)[0]->Reshape(
@@ -127,6 +133,11 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
         datum.height(), datum.width());
     this->prefetch_data_.Reshape(this->layer_param_.data_param().batch_size(),
         datum.channels(), datum.height(), datum.width());
+
+    this->datum_channels_ = datum.channels();
+    this->datum_height_ = datum.height();
+    this->datum_width_ = datum.width();
+    this->datum_size_ = datum.channels() * datum.height() * datum.width();
   }
   LOG(INFO) << "output data size: " << (*top)[0]->num() << ","
       << (*top)[0]->channels() << "," << (*top)[0]->height() << ","
@@ -138,11 +149,6 @@ void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
     this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(),
         label_size, 1, 1);
   }
-  // datum size
-  this->datum_channels_ = datum.channels();
-  this->datum_height_ = datum.height();
-  this->datum_width_ = datum.width();
-  this->datum_size_ = datum.channels() * datum.height() * datum.width();
 }
 
 // This function is used to create a thread that prefetches the data.

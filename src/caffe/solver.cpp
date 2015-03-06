@@ -35,8 +35,10 @@ void Solver<Dtype>::Init(const SolverParameter& param) {
   if (param_.random_seed() >= 0) {
     Caffe::set_random_seed(param_.random_seed());
   }
+  Caffe::set_phase(Caffe::TRAIN);
   // Scaffolding code
   InitTrainNet();
+  Caffe::set_phase(Caffe::TEST);
   InitTestNets();
   LOG(INFO) << "Solver scaffolding done.";
 }
@@ -172,6 +174,7 @@ void Solver<Dtype>::InitTestNets() {
       ReadNetParamsFromTextFileOrDie(param_.net(), &net_params[test_net_id]);
     }
   }
+  LOG(INFO) << "num_test_nets: " << num_test_net_instances;
   test_nets_.resize(num_test_net_instances);
   for (int i = 0; i < num_test_net_instances; ++i) {
     // Set the correct NetState.  We start with the solver defaults (lowest

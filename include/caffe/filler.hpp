@@ -157,6 +157,30 @@ class XavierFiller : public Filler<Dtype> {
   }
 };
 
+template <typename Dtype> 
+class LoadFromFileFiller : public Filler<Dtype> {
+ public:
+  explicit LoadFromFileFiller(const FillerParameter& param)
+      : Filler<Dtype>(param) {}
+  virtual void Fill(Blob<Dtype>* blob) {
+      FILE* fp = fopen(this->filler_param_.float_file().c_str(),
+              "rb");
+      CHECK(fp) << this->filler_param_.float_file();
+      int dim[2];
+      CHECK_EQ(fread(dim, sizeof(int), 2, fp), 2);
+      int count = blob->count();
+      CHECK_EQ(dim[0] * dim[1], count); 
+      std::vector<float> vec(blob->count());
+      CHECK_EQ(fread(vec.data(), sizeof(float), count, fp), 
+              count);
+      fclose(fp);
+
+      Dtype* p = blob->mutable_cpu_data();
+      for (int i = 0; i < count; i++) {
+          p[i] = vec[i];
+      }
+  }
+};
 
 /**
  * @brief Get a specific filler from the specification given in FillerParameter.
@@ -177,6 +201,8 @@ Filler<Dtype>* GetFiller(const FillerParameter& param) {
     return new UniformFiller<Dtype>(param);
   } else if (type == "xavier") {
     return new XavierFiller<Dtype>(param);
+  } else if (type == "load_from_file") {
+    return new LoadFromFileFiller<Dtype>(param);
   } else {
     CHECK(false) << "Unknown filler name: " << param.type();
   }

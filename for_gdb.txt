@@ -1,5 +1,4 @@
-file build/tools/caffe
-run train --solver=/home/wangjianfeng/code/mycode/examples/cifar10/nin_plus1_multicrop/cifar10_solver_merge.prototxt
-run train --solver=/home/wangjianfeng/code/mycode/examples/test_code_only/cifar10_solver.prototxt
-build/tools/caffe train --solver=/home/wangjianfeng/code/mycode/examples/test_code_only/cifar10_solver.prototxt
+ build/tools/caffe
+
+run test --weights /home/wangjianfeng/data/vgg_model/VGG_ILSVRC_16_layers.caffemodel --iterations 619 --gpu 0 --model /home/wangjianfeng/code/mycode/examples/voc/voc2007/VGG_ILSVRC_16_layers_train.prototxt
 
