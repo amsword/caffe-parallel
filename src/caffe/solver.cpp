@@ -79,7 +79,6 @@ void Solver<Dtype>::InitTrainNet() {
   net_state.MergeFrom(param_.train_state());
   net_param.mutable_state()->CopyFrom(net_state);
 
-  //net_.reset(new Net<Dtype>(net_param));
   vector<int> vec_device_id;
   if (param_.has_device_id()) {
       vec_device_id.push_back(param_.device_id());
@@ -115,7 +114,13 @@ void Solver<Dtype>::InitTrainNet() {
       }
   }
   CHECK_EQ(vec_random_seeds.size(), vec_device_id.size());
-  net_.reset(new NetParallel<Dtype>(net_param, vec_device_id, vec_random_seeds));
+  if (vec_device_id.size() == 1) {
+      Caffe::SetDevice(vec_device_id[0]);
+      Caffe::set_random_seed(vec_random_seeds[0]);
+      net_.reset(new Net<Dtype>(net_param));
+  } else {
+      net_.reset(new NetParallel<Dtype>(net_param, vec_device_id, vec_random_seeds));
+  }
 }
 
 template <typename Dtype>
