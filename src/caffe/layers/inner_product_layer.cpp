@@ -58,6 +58,32 @@ void InnerProductLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
+void InnerProductLayer<Dtype>::AdaptiveInitialization(const vector<Blob<Dtype>*> &bottom) {
+    const Dtype* bottom_data = bottom[0]->cpu_data();
+    const int data_count = bottom[0]->count();
+    Dtype s2 = 0;
+    for (int i = 0; i < data_count; i++) {
+        Dtype v = bottom_data[i];
+        s2 += v * v;
+    }
+    s2 /= data_count;
+    int num_multi = this->K_;
+    Dtype var_weight = 1.0 / (Dtype)num_multi / s2;
+
+    FillerParameter para;
+    para.set_type("gaussian");
+    para.set_std(sqrt(var_weight));
+    shared_ptr<Filler<Dtype> > weight_filler(GetFiller<Dtype>(para));
+    weight_filler->Fill(this->blobs_[0].get());
+    if (bias_term_) {
+      para.set_type("constant");
+      para.set_value(0);
+      shared_ptr<Filler<Dtype> > bias_filler(GetFiller<Dtype>(para));
+      bias_filler->Fill(this->blobs_[1].get());
+    }
+}
+
+template <typename Dtype>
 void InnerProductLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
   const Dtype* bottom_data = bottom[0]->cpu_data();

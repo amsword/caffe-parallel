@@ -80,7 +80,7 @@ bool ReadImageToDatum(const string& filename, const vector<int> &labels,
   }
   if (height > 0 && width > 0) {
     cv::resize(cv_img_origin, cv_img, cv::Size(width, height));
-  } else if (height == 0 && width != 0 || height != 0 && width == 0) {
+  } else if ((height == 0 && width != 0) || (height != 0 && width == 0)) {
     int small_side = height > 0 ? height : width;
     CHECK_GT(small_side, 0);
     if (cv_img_origin.cols < cv_img_origin.rows) {
@@ -139,7 +139,7 @@ bool ReadImageToDatum(const string& filename, const int label,
   }
   if (height > 0 && width > 0) {
     cv::resize(cv_img_origin, cv_img, cv::Size(width, height));
-  } else if (height == 0 && width != 0 || height != 0 && width == 0) {
+  } else if ((height == 0 && width != 0) || (height != 0 && width == 0)) {
     int small_side = height > 0 ? height : width;
     CHECK_GT(small_side, 0);
     if (width < height) {

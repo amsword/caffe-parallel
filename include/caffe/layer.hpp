@@ -118,6 +118,12 @@ class Layer {
       vector<Blob<Dtype>*>* top);
 
   /**
+   * initializate the parameters by the input data distribution. 
+   */
+  virtual void AdaptiveInitialization(const vector<Blob<Dtype>*>& bottom) {
+  }
+
+  /**
    * @brief Given the top blob error gradients, compute the bottom blob error
    *        gradients.
    *
@@ -409,6 +415,10 @@ class Layer {
 template <typename Dtype>
 inline Dtype Layer<Dtype>::Forward(const vector<Blob<Dtype>*>& bottom,
     vector<Blob<Dtype>*>* top) {
+  if (this->layer_param_.is_adaptive_initialization()) {
+      this->AdaptiveInitialization(bottom);
+      this->layer_param_.set_is_adaptive_initialization(false);
+  }
   Dtype loss = 0;
   switch (Caffe::mode()) {
   case Caffe::CPU:

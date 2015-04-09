@@ -267,6 +267,7 @@ class InnerProductLayer : public Layer<Dtype> {
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
  protected:
+  virtual void AdaptiveInitialization(const vector<Blob<Dtype>*> &bottom);
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,

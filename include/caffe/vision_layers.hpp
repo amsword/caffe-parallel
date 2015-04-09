@@ -43,6 +43,7 @@ class CCCPLayer : public Layer<Dtype> {
   virtual inline int MinTopBlobs() const { return 1; }
   virtual inline bool EqualNumBottomTopBlobs() const { return true; }
  protected:
+  virtual void AdaptiveInitialization(const vector<Blob<Dtype>*> &bottom);
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
@@ -115,6 +116,7 @@ class ConvolutionLayer : public Layer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
 
+
   virtual inline LayerParameter_LayerType type() const {
     return LayerParameter_LayerType_CONVOLUTION;
   }
@@ -123,6 +125,7 @@ class ConvolutionLayer : public Layer<Dtype> {
   virtual inline bool EqualNumBottomTopBlobs() const { return true; }
 
  protected:
+  virtual void AdaptiveInitialization(const vector<Blob<Dtype>*> &bottom);
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       vector<Blob<Dtype>*>* top);
   virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,

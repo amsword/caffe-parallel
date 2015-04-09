@@ -300,6 +300,10 @@ message LayerParameter {
   // The weight decay that is multiplied on the global weight decay.
   repeated float weight_decay = 8;
 
+  // in each forward pass, the layer may be initialized so that the output
+  // has zero mean and unit variance; only used in training, not in testing
+  optional bool is_adaptive_initialization = 2006 [default = false];
+
   // The amount of weight to assign each top blob in the objective.
   // Each layer assigns a default value, usually of either 0 or 1,
   // to each top blob.

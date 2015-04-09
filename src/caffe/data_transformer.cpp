@@ -171,7 +171,7 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
 
   transformed_data += batch_item_id * total_crops_ * 
       datum.channels() * crop_size * crop_size;
-  Dtype* debug_pre = transformed_data;
+  //Dtype* debug_pre = transformed_data;
   for (int idx_grid_dim = 0; idx_grid_dim < this->param_.grid_dim_size();
           idx_grid_dim++) {
       int grid_dim = this->param_.grid_dim(idx_grid_dim);
