@@ -80,18 +80,14 @@ bool ReadImageToDatum(const string& filename, const vector<int> &labels,
   }
   if (height > 0 && width > 0) {
     cv::resize(cv_img_origin, cv_img, cv::Size(width, height));
-  } 
-  else if (width == -1 || height == -1) // in this case, we treat the other one as the minimal width
-  {
-      int min_value = width == -1 ? height : width;
-      CHECK(min_value);
-      int w, h;
-      if (width < height)
-      {
-          w = min_value;
-          h = height * w / width;
-      }
-      cv::resize(cv_img_origin, cv_img, cv::Size(w, h));
+  } else if (height == 0 && width != 0 || height != 0 && width == 0) {
+    int small_side = height > 0 ? height : width;
+    CHECK_GT(small_side, 0);
+    if (cv_img_origin.cols < cv_img_origin.rows) {
+        cv::resize(cv_img_origin, cv_img, cv::Size(small_side, cv_img_origin.rows * small_side / cv_img_origin.cols));
+    } else {
+        cv::resize(cv_img_origin, cv_img, cv::Size(cv_img_origin.cols * small_side / cv_img_origin.rows, small_side));
+    }
   }
   else {
     cv_img = cv_img_origin;
@@ -143,6 +139,14 @@ bool ReadImageToDatum(const string& filename, const int label,
   }
   if (height > 0 && width > 0) {
     cv::resize(cv_img_origin, cv_img, cv::Size(width, height));
+  } else if (height == 0 && width != 0 || height != 0 && width == 0) {
+    int small_side = height > 0 ? height : width;
+    CHECK_GT(small_side, 0);
+    if (width < height) {
+        cv::resize(cv_img_origin, cv_img, cv::Size(small_side, cv_img_origin.rows * small_side / cv_img_origin.cols));
+    } else {
+        cv::resize(cv_img_origin, cv_img, cv::Size(cv_img_origin.cols * small_side / cv_img_origin.rows, small_side));
+    }
   } else {
     cv_img = cv_img_origin;
   }

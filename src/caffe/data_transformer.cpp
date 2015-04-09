@@ -191,8 +191,13 @@ void DataTransformer<Dtype>::Transform(const int batch_item_id,
                   is_random_rotate = random_rotate;
               } else {
                   CHECK_EQ(mirror, false);
-                  h_off += free_height / 2;
-                  w_off += free_width / 2;
+                  if (grid_dim == 2 && cover_size == crop_size) {
+                      h_off += idx_grid_height == 0 ? 0 : free_height;
+                      w_off += idx_grid_width == 0 ? 0 : free_width;
+                  } else {
+                      h_off += free_height / 2;
+                      w_off += free_width / 2;
+                  }
               }
               Transform(datum, mean, transformed_data, 
                       crop_size, cover_size, h_off - padding, w_off - padding, 
