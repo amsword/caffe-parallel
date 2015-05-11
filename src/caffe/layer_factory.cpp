@@ -263,6 +263,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new MultiLabelAccuracyLayer<Dtype>(param);
   case LayerParameter_LayerType_NORMALIZATION:
     return new NormalizationLayer<Dtype>(param);
+  case LayerParameter_LayerType_ZERO_MEAN_TARGET_LOSS:
+    return new ZeroMeanTargetLoss<Dtype>(param);
   case LayerParameter_LayerType_NONE:
     LOG(FATAL) << "Layer " << name << " has unspecified type.";
   default:

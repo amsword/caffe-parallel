@@ -16,6 +16,33 @@ namespace caffe {
 const float kLOG_THRESHOLD = 1e-20;
 
 template <typename Dtype>
+class ZeroMeanTargetLoss: public Layer<Dtype> {
+ public:
+  explicit ZeroMeanTargetLoss(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual inline LayerParameter_LayerType type() const {
+    return LayerParameter_LayerType_ZERO_MEAN_TARGET_LOSS;
+  }
+
+  virtual inline int ExactNumBottomBlobs() const { return 1; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
+
+  Blob<Dtype> aux_blob_;
+};
+
+template <typename Dtype>
 class MultiLabelAccuracyLayer : public Layer<Dtype> {
  public:
   explicit MultiLabelAccuracyLayer(const LayerParameter& param)

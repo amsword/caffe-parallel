@@ -277,6 +277,8 @@ message LayerParameter {
     MULTILABEL_ACCURACY = 219;
     CROP_POOLING = 220;
     NORMALIZATION = 221;
+    ZERO_MEAN_TARGET_LOSS = 222;
+    BATCH_NORMALIZATION_SINGLE = 223;
   }
   optional LayerType type = 5; // the layer type from the enum above
 
