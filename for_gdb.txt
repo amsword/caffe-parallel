@@ -2,4 +2,4 @@ build/tools/caffe
 
 run test --weights /home/wangjianfeng/data/vgg_model/VGG_ILSVRC_16_layers.caffemodel --iterations 619 --gpu 0 --model /home/wangjianfeng/code/mycode/examples/voc/voc2007/VGG_ILSVRC_16_layers_train.prototxt
 run /home/wangjianfeng/data/alex_net/bvlc_alexnet.caffemodel /home/wangjianfeng/code/mycode/examples/voc/voc2007/alex_net/extract_train_1_4.prototxt data /home/wangjianfeng/tmp/data.float.bin 10 test GPU 3 
-
+run train --solver /home/wangjianfeng/working/voc/voc2007/alex_net/no_pre_train/softmax/a__s.prototxt
