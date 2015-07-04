@@ -23,3 +23,10 @@ snapshot: 5000
 snapshot_prefix: "examples/mnist/lenet"
 # solver mode: CPU or GPU
 solver_mode: GPU
+device_id: 0
+random_seed: 1
+device_ids: 1
+random_seeds: 2
+#device_ids: 2
+#random_seeds: 3
+
