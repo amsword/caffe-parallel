@@ -3,7 +3,7 @@
 Caffe is a deep learning framework developed with cleanliness, readability, and speed in mind.<br />
 Consult the [project website](http://caffe.berkeleyvision.org) for all documentation.
 
-This code tries to parallel the trainig synchronously. <br/><br/>
+This code tries to parallel the training synchronously. <br/><br/>
 
 The basic idea:<br/>
 1. Before calling the ForwardBackward, distribute the parameters to all gpus.<br/>
